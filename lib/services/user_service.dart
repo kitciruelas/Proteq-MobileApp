@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user.dart';
+import '../api/authentication.dart';
 
 class UserService {
   static Future<User> fetchUser(int userId) async {
@@ -11,5 +12,15 @@ class UserService {
     } else {
       throw Exception('Failed to load user');
     }
+  }
+
+  static Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    return await AuthenticationApi.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
   }
 } 

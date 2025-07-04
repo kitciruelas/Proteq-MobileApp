@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../api/authentication.dart';
+import 'otp_screen.dart';
 
 class ForgetPasswordScreen extends StatefulWidget {
   const ForgetPasswordScreen({super.key});
@@ -21,45 +23,74 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; });
-    await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+    final result = await AuthenticationApi.forgotPassword(_emailController.text.trim());
     if (mounted) {
       setState(() { _isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset instructions sent to your email.'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: Text(result['message'] ?? 'Unknown error'),
+          backgroundColor: result['success'] == true ? Colors.green : Colors.red,
         ),
       );
+      if (result['success'] == true) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => OtpScreen(email: _emailController.text.trim()),
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Forgot Password'),
-        backgroundColor: Colors.red,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Center(
-          child: SingleChildScrollView(
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  const Icon(
+                    Icons.lock_outline,
+                    size: 48,
+                    color: Colors.amber,
+                  ),
+                  const SizedBox(height: 16),
                   const Text(
-                    'Enter your email to receive password reset instructions.',
-                    style: TextStyle(fontSize: 16),
+                    'Forgot password',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Enter the email associated with your account.\nWe\'ll send you the reset link.',
+                    style: TextStyle(fontSize: 15, color: Colors.black87),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 28),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Email',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 15,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      labelText: 'Email',
+                      hintText: 'Enter your email',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.email),
                     ),
@@ -73,7 +104,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -81,6 +112,9 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -92,13 +126,34 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                               ),
                             )
                           : const Text(
-                              'Send Reset Instructions',
+                              'Reset Password',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Colors.black12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      child: const Text(
+                        'Back to sign in',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
                 ],

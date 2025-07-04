@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/incident_report.dart';
 import 'api_client.dart';
+  import 'package:flutter/material.dart';
 
 class AuthenticationApi {
   // Base URL depending on platform (Web or Android Emulator)
@@ -176,6 +177,99 @@ class AuthenticationApi {
       priorityLevel: report.priorityLevel,
       reporterSafeStatus: report.safetyStatus,
     );
+  }
+
+  // Change Password API Call
+  static Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final token = ApiClient.authToken;
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No session token found',
+          'requiresLogin': true,
+        };
+      }
+      final url = Uri.parse('$_baseUrl/controller/User/ChangePassword.php');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
+    }
+  }
+
+  // Forgot Password API Call
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final url = Uri.parse('$_baseUrl/controller/User/ForgotPassword.php');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
+    }
+  }
+  
+  // Verify OTP API Call
+  static Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    try {
+      final url = Uri.parse('$_baseUrl/controller/User/VerifyOtp.php');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'otp': otp}),
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
+    }
+  }
+
+  // Reset Password API Call
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final url = Uri.parse('$_baseUrl/controller/User/ResetPassword.php');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
+    }
   }
 }
 
