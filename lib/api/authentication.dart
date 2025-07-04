@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import '../models/user.dart';
+import '../models/incident_report.dart';
+import 'api_client.dart';
 
 class AuthenticationApi {
   // Base URL depending on platform (Web or Android Emulator)
@@ -27,17 +30,12 @@ class AuthenticationApi {
     }
   }
 
-  // Login API Call
+  // Login API Call - now uses the new ApiClient
   static Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      final url = Uri.parse('$_baseUrl/controller/User/Logins.php');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      );
-
-      return _handleResponse(response);
+      final result = await ApiClient.login(email: email, password: password);
+      print('[AuthenticationApi] Login response: ' + result.toString());
+      return result;
     } catch (e) {
       return {
         'success': false,
@@ -46,8 +44,116 @@ class AuthenticationApi {
     }
   }
 
-  // Staff API Call
-  // ... existing code ...
+  // Logout API Call - now uses the new ApiClient
+  static Future<Map<String, dynamic>> logout() async {
+    try {
+      final result = await ApiClient.logout();
+      return result;
+    } catch (e) {
+      // Even if logout API fails, clear local token
+      ApiClient.clearAuthToken();
+      return {
+        'success': true,
+        'message': 'Logged out successfully',
+      };
+    }
+  }
+
+  // Validate session with server
+  static Future<Map<String, dynamic>> validateSession() async {
+    try {
+      final token = ApiClient.authToken;
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No session token found',
+          'requiresLogin': true,
+        };
+      }
+
+      final url = Uri.parse('$_baseUrl/controller/User/ValidateSession.php');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final result = _handleResponse(response);
+      
+      if (!result['success']) {
+        // Session is invalid, clear local token
+        ApiClient.clearAuthToken();
+        result['requiresLogin'] = true;
+      }
+      
+      return result;
+    } catch (e) {
+      // On error, assume session is invalid
+      ApiClient.clearAuthToken();
+      return {
+        'success': false,
+        'message': 'Session validation failed: $e',
+        'requiresLogin': true,
+      };
+    }
+  }
+
+  // Refresh session token
+  static Future<Map<String, dynamic>> refreshToken() async {
+    try {
+      final token = ApiClient.authToken;
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No session token found',
+          'requiresLogin': true,
+        };
+      }
+
+      final url = Uri.parse('$_baseUrl/controller/User/RefreshToken.php');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final result = _handleResponse(response);
+      
+      if (result['success'] && result['token'] != null) {
+        // Store new token
+        ApiClient.setAuthToken(result['token']);
+      } else {
+        // Token refresh failed, clear token
+        ApiClient.clearAuthToken();
+        result['requiresLogin'] = true;
+      }
+      
+      return result;
+    } catch (e) {
+      ApiClient.clearAuthToken();
+      return {
+        'success': false,
+        'message': 'Token refresh failed: $e',
+        'requiresLogin': true,
+      };
+    }
+  }
+
+  // Get authenticated headers for API calls
+  static Future<Map<String, String>> getAuthenticatedHeaders() async {
+    final token = ApiClient.authToken;
+    final headers = {'Content-Type': 'application/json'};
+    
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    
+    return headers;
+  }
 
   // Helper method to decode and handle HTTP response
   static Map<String, dynamic> _handleResponse(http.Response response) {
@@ -56,9 +162,20 @@ class AuthenticationApi {
     } catch (_) {
       return {
         'success': false,
-        'message': 'Server error: {response.statusCode}.',
+        'message': 'Server error: ${response.statusCode}.',
       };
     }
+  }
+
+  static Future<Map<String, dynamic>> submitIncidentReport(IncidentReport report) async {
+    return await ApiClient.createIncidentReport(
+      incidentType: report.incidentType,
+      description: report.description,
+      longitude: report.longitude ?? 0.0,
+      latitude: report.latitude ?? 0.0,
+      priorityLevel: report.priorityLevel,
+      reporterSafeStatus: report.safetyStatus,
+    );
   }
 }
 

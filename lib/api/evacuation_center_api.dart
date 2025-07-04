@@ -1,0 +1,35 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+import '../models/evacuation_center.dart';
+import 'api_client.dart';
+
+class EvacuationCenterApi {
+  static final String _baseUrl = kIsWeb
+      ? 'http://localhost/api'
+      : 'http://10.0.2.2/api';
+
+  // Fetch all evacuation centers
+  static Future<Map<String, dynamic>> fetchAllCenters() async {
+    return await ApiClient.authenticatedCall(
+      endpoint: '/controller/EvacuationCenters.php',
+      method: 'GET',
+    );
+  }
+
+  // Fetch center by ID
+  static Future<Map<String, dynamic>> fetchCenterById(int centerId) async {
+    return await ApiClient.authenticatedCall(
+      endpoint: '/controller/EvacuationCenters.php?action=get_by_id&id=$centerId',
+      method: 'GET',
+    );
+  }
+
+  // Search centers
+  static Future<Map<String, dynamic>> searchCenters(String query) async {
+    return await ApiClient.authenticatedCall(
+      endpoint: '/controller/EvacuationCenters.php?action=search&query=$query',
+      method: 'GET',
+    );
+  }
+} 

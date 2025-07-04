@@ -1,4 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import '../models/incident_report.dart';
+import '../services/incident_report_service.dart';
+import '../models/user.dart';
+import '../services/session_service.dart';
+import 'package:http/browser_client.dart';
+import 'dart:convert';
+import '../api/incident_report_api.dart';
+import 'dashboard.dart';
 
 class ReportIncidentScreen extends StatefulWidget {
   const ReportIncidentScreen({super.key});
@@ -15,6 +24,11 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   bool _isSubmitting = false;
+  bool _isGettingLocation = false;
+  User? _currentUser;
+  bool _isUserLoading = true;
+  double? _longitude;
+  double? _latitude;
 
   final List<String> _incidentTypes = [
     'Medical',
@@ -24,21 +38,36 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   ];
   final List<String> _priorityLevels = [
     'Low',
-    'Medium',
+    'Moderate',
     'High',
     'Critical',
   ];
   final List<String> _safetyStatuses = [
-    'Safe',
-    'In Danger',
-    'Need Assistance',
+    'safe',
+    'injured',
+    'unknown',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+    _getCurrentLocation();
+  }
 
   @override
   void dispose() {
     _descriptionController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final user = await SessionService.getCurrentUser();
+    setState(() {
+      _currentUser = user;
+      _isUserLoading = false;
+    });
   }
 
   void _showSuccessDialog() {
@@ -50,8 +79,10 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => DashboardScreen()),
+                (Route<dynamic> route) => false,
+              );
             },
             child: const Text('OK'),
           ),
@@ -60,9 +91,172 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     );
   }
 
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isGettingLocation = true;
+    });
+
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showErrorDialog('Location services are disabled. Please enable location services in your device settings to get your coordinates.');
+        setState(() {
+          _isGettingLocation = false;
+        });
+        return;
+      }
+
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showErrorDialog('Location permission denied. Please enable location permission in your device settings to get your coordinates.');
+          setState(() {
+            _isGettingLocation = false;
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _showErrorDialog('Location permissions are permanently denied. Please enable location permissions in your device settings to continue.');
+        setState(() {
+          _isGettingLocation = false;
+        });
+        return;
+      }
+
+      // Get current position with timeout
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 30),
+      );
+
+      setState(() {
+        _longitude = position.longitude;
+        _latitude = position.latitude;
+        _locationController.text = '${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}';
+        _isGettingLocation = false;
+      });
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Location captured successfully: ${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+
+    } catch (e) {
+      setState(() {
+        _isGettingLocation = false;
+      });
+      
+      String errorMessage = 'Failed to get location';
+      if (e.toString().contains('timeout')) {
+        errorMessage = 'Location request timed out. Please try again or check your internet connection.';
+      } else if (e.toString().contains('permission')) {
+        errorMessage = 'Location permission is required. Please enable location permissions in your device settings.';
+      } else {
+        errorMessage = 'Failed to get location: $e';
+      }
+      
+      _showErrorDialog(errorMessage);
+    }
+  }
+
+  Future<void> _submitReport() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Wait for user to load
+    if (_isUserLoading) {
+      _showErrorDialog('Loading user information. Please wait.');
+      return;
+    }
+    // Check if user is available
+    if (_currentUser == null) {
+      _showErrorDialog('User information not available. Please log in again.');
+      return;
+    }
+
+    // Check if location is captured
+    if (_longitude == null || _latitude == null) {
+      _showErrorDialog('Please capture your location before submitting the report.');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      // Create incident report object
+      final incidentReport = IncidentReport(
+        userId: _currentUser!.userId,
+        incidentType: _incidentType!,
+        description: _descriptionController.text.trim(),
+        location: _locationController.text.trim(),
+        longitude: _longitude,
+        latitude: _latitude,
+        priorityLevel: _priorityLevel!,
+        safetyStatus: _safetyStatus!,
+        reporterName: _currentUser!.fullName,
+        reporterEmail: _currentUser!.email,
+      );
+
+      // Submit report via API
+      final result = await IncidentReportApi.submitIncidentReport(incidentReport);
+
+      setState(() => _isSubmitting = false);
+
+      if (result['success'] == true) {
+        _showSuccessDialog();
+      } else {
+        // Check if authentication is required
+        if (result['requiresAuth'] == true) {
+          _showErrorDialog('${result['message']}\n\nPlease log in again and try submitting your report.');
+        } else {
+          _showErrorDialog(result['message'] ?? 'Failed to submit report. Please try again.');
+        }
+      }
+    } catch (e) {
+      setState(() => _isSubmitting = false);
+      _showErrorDialog('An error occurred: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryRed = Colors.red;
+    if (_isUserLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -149,6 +343,97 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                 validator: (val) => (val == null || val.isEmpty) ? 'Location is required' : null,
                 onChanged: (_) => setState(() {}),
               ),
+              const SizedBox(height: 12),
+              // GPS Coordinates
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _latitude != null && _longitude != null 
+                              ? Colors.green 
+                              : Colors.grey.shade300,
+                          width: _latitude != null && _longitude != null ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        color: _latitude != null && _longitude != null 
+                            ? Colors.green.withOpacity(0.1) 
+                            : Colors.grey.withOpacity(0.05),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _latitude != null && _longitude != null 
+                                    ? Icons.location_on 
+                                    : Icons.location_off,
+                                color: _latitude != null && _longitude != null 
+                                    ? Colors.green 
+                                    : Colors.grey,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'GPS Coordinates', 
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold, 
+                                  fontSize: 14,
+                                  color: _latitude != null && _longitude != null 
+                                      ? Colors.green 
+                                      : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _latitude != null && _longitude != null
+                                ? 'Lat: ${_latitude!.toStringAsFixed(6)}\nLng: ${_longitude!.toStringAsFixed(6)}'
+                                : 'No coordinates captured yet',
+                            style: TextStyle(
+                              color: _latitude != null && _longitude != null ? Colors.green : Colors.grey,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _isGettingLocation ? null : _getCurrentLocation,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _latitude != null && _longitude != null 
+                          ? Colors.green 
+                          : primaryRed,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    icon: _isGettingLocation 
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Icon(
+                            _latitude != null && _longitude != null 
+                                ? Icons.refresh 
+                                : Icons.my_location, 
+                            size: 20,
+                          ),
+                    label: Text(_isGettingLocation 
+                        ? 'Getting...' 
+                        : _latitude != null && _longitude != null 
+                            ? 'Refresh' 
+                            : 'Get Location'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
               const Text('Additional Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 16),
@@ -199,14 +484,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                   : SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () async {
-                          if (_formKey.currentState!.validate()) {
-                            setState(() => _isSubmitting = true);
-                            await Future.delayed(const Duration(seconds: 1));
-                            setState(() => _isSubmitting = false);
-                            _showSuccessDialog();
-                          }
-                        },
+                        onPressed: _submitReport,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryRed,
                           padding: const EdgeInsets.symmetric(vertical: 16),

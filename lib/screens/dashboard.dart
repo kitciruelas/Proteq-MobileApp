@@ -3,8 +3,10 @@ import 'report_incident.dart';
 import 'welfare_check.dart';
 import 'evacuation_centers.dart';
 import 'safety_protocols.dart';
+import 'profile.dart';
 import '../services/user_service.dart';
 import '../models/user.dart';
+import '../login_screens/login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final User? user;
@@ -54,169 +56,285 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _toggleProfileDropdown(TapDownDetails details) async {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final result = await showMenu(
+      context: context,
+      position: RelativeRect.fromRect(
+        details.globalPosition & const Size(40, 40),
+        Offset.zero & overlay.size,
+      ),
+      items: <PopupMenuEntry>[
+        PopupMenuItem<Never>(
+          enabled: false,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Colors.red,
+                radius: 18,
+                child: Icon(Icons.person, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _user?.fullName ?? 'Welcome, User',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      _user?.userType ?? '',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'profile',
+          child: Row(
+            children: const [
+              Icon(Icons.person, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Profile'),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'logout',
+          child: Row(
+            children: const [
+              Icon(Icons.logout, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Logout'),
+            ],
+          ),
+        ),
+      ],
+    );
+    if (result == 'logout') {
+      _logout();
+    } else if (result == 'profile') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ProfileScreen(user: _user),
+        ),
+      );
+    }
+  }
+
+  void _logout() {
+    // Navigate to login screen
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
   Widget _buildHomeTab() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          // Greeting Row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Colors.red,
-                  radius: 22,
-                  child: Icon(Icons.person, color: Colors.white, size: 28),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _isLoadingUser
-                          ? const Text('Loading...', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18))
-                          : Text(
-                              _user != null
-                                  ? '${_user!.fullName}'
-                                  : 'Welcome, User',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                            ),
-                      _isLoadingUser
-                          ? const Text('', style: TextStyle(color: Colors.grey, fontSize: 14))
-                          : Text(
-                              _user != null ? _user!.userType : '',
-                              style: const TextStyle(color: Colors.grey, fontSize: 14),
-                            ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.notifications_active, color: Colors.red),
-                  onPressed: () {},
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          // Emergency Alert Card
+          // Greeting Card
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.red[100],
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(18.0),
-                    child: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text("ALERT: Earthquake Drill at 9:30 AM", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward),
-                    onPressed: () {},
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.red.shade50,
+                    Colors.white,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
                 ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTapDown: _toggleProfileDropdown,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.red.shade400, Colors.red.shade600],
+                          ),
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const CircleAvatar(
+                          backgroundColor: Colors.transparent,
+                          radius: 25,
+                          child: Icon(Icons.person, color: Colors.white, size: 30),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _isLoadingUser
+                              ? const Text(
+                                  'Loading...',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                    color: Colors.black87,
+                                  ),
+                                )
+                              : Text(
+                                  _user != null
+                                      ? 'Hello, ${_user!.fullName}!'
+                                      : 'Welcome, User!',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                          const SizedBox(height: 4),
+                          _isLoadingUser
+                              ? const Text(
+                                  'Please wait...',
+                                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                                )
+                              : Text(
+                                  _user != null ? _user!.userType : 'Guest User',
+                                  style: TextStyle(
+                                    color: Colors.red.shade600,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.notifications_active, color: Colors.red.shade600, size: 24),
+                        onPressed: () {},
+                        style: IconButton.styleFrom(
+                          padding: const EdgeInsets.all(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
           const SizedBox(height: 18),
-          // Emergency Overview
+          // Emergency Alert Card
+          if (_showAlert)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.red[100],
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(18.0),
+                      child: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text("ALERT: Earthquake Drill at 9:30 AM", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          _showAlert = false;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 24),
+          // Quick Actions
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Today's Emergency Overview", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 12),
+                const Text('Quick Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 16),
                 Row(
                   children: [
-                    // Incidents
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: const [
-                            Icon(Icons.report, color: Colors.red, size: 28),
-                            SizedBox(height: 8),
-                            Text('3', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                            Text('Incidents', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                          ],
-                        ),
+                      child: _buildQuickActionCard(
+                        icon: Icons.emergency,
+                        title: 'Report\nIncident',
+                        color: Colors.red,
+                        onTap: () {
+                          setState(() {
+                            _selectedIndex = 1;
+                          });
+                        },
                       ),
                     ),
-                    // People Safe
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: const [
-                            Icon(Icons.people, color: Colors.green, size: 28),
-                            SizedBox(height: 8),
-                            Text('120', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                            Text('Safe', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                          ],
-                        ),
+                      child: _buildQuickActionCard(
+                        icon: Icons.health_and_safety,
+                        title: 'Welfare\nCheck',
+                        color: Colors.green,
+                        onTap: () {
+                          setState(() {
+                            _selectedIndex = 2;
+                          });
+                        },
                       ),
                     ),
-                    // Resources
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.only(left: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.08),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: const [
-                            Icon(Icons.local_drink, color: Colors.blue, size: 28),
-                            SizedBox(height: 8),
-                            Text('Water', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                            Text('Available', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                          ],
-                        ),
+                      child: _buildQuickActionCard(
+                        icon: Icons.location_on,
+                        title: 'Find\nShelter',
+                        color: Colors.blue,
+                        onTap: () {
+                          setState(() {
+                            _selectedIndex = 3;
+                          });
+                        },
                       ),
                     ),
                   ],
@@ -224,70 +342,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 18),
-          // Emergency Plan/Resources
+          const SizedBox(height: 24),
+          // Safety Tips
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text('Evacuation Plan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('See all', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
-                  ],
-                ),
+                const Text('Safety Tips', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                 const SizedBox(height: 12),
                 Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lightbulb, color: Colors.orange[700], size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'During an Earthquake',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Drop, Cover, and Hold On. Stay away from windows and heavy objects.',
+                              style: TextStyle(fontSize: 12, color: Colors.black87),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Emergency Contacts
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Emergency Contacts', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.08),
-                        blurRadius: 8,
+                        color: Colors.grey.withOpacity(0.1),
+                        blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Container(
-                        width: 90,
-                        height: 90,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFEBEE),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(18),
-                            bottomLeft: Radius.circular(18),
-                          ),
-                        ),
-                        child: const Icon(Icons.map, color: Colors.red, size: 40),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text('Nearest Center: Main Gym', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                              SizedBox(height: 4),
-                              Text('Evacuation Plan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              SizedBox(height: 4),
-                              Text('Follow the marked route to the main gym for safety.', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12.0),
-                        child: CircleAvatar(
-                          backgroundColor: Colors.red,
-                          radius: 18,
-                          child: Icon(Icons.arrow_forward, color: Colors.white),
-                        ),
-                      ),
+                      _buildContactRow('Campus Security', '911', Icons.security),
+                      const Divider(height: 16),
+                      _buildContactRow('Health Center', '(555) 123-4567', Icons.local_hospital),
+                      const Divider(height: 16),
+                      _buildContactRow('Emergency Hotline', '1-800-EMERGENCY', Icons.phone),
                     ],
                   ),
                 ),
@@ -348,6 +473,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildQuickActionCard({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              CircleAvatar(
+                backgroundColor: color.withOpacity(0.1),
+                radius: 20,
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactRow(String name, String contact, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.red, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              Text(
+                contact,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.call, color: Colors.red, size: 20),
+          onPressed: () {},
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ],
+    );
+  }
+
   Widget _getScreen(int index) {
     switch (index) {
       case 0:
@@ -368,58 +561,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: _getScreen(_selectedIndex),
-      ),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton(
-              onPressed: () {},
-              backgroundColor: Colors.green,
-              child: const Icon(Icons.add),
-            )
-          : null,
-      bottomNavigationBar: SafeArea(
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: _selectedIndex,
-          selectedFontSize: 14,
-          unselectedFontSize: 12,
-          selectedItemColor: Colors.red,
-          unselectedItemColor: Colors.grey,
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-              tooltip: 'Home',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.report),
-              label: 'Report',
-              tooltip: 'Report Incident',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.people),
-              label: 'Welfare',
-              tooltip: 'Welfare Check',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.info),
-              label: 'Evacuation',
-              tooltip: 'Evacuation Centers',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.security),
-              label: 'Safety',
-              tooltip: 'Safety Protocols',
-            ),
-          ],
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
+        body: SafeArea(
+          child: _getScreen(_selectedIndex),
         ),
-      ),
-    );
+        floatingActionButton: _selectedIndex == 0
+            ? FloatingActionButton(
+                onPressed: () {},
+                backgroundColor: Colors.green,
+                child: const Icon(Icons.add),
+              )
+            : null,
+        bottomNavigationBar: SafeArea(
+          child: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            currentIndex: _selectedIndex,
+            selectedFontSize: 14,
+            unselectedFontSize: 12,
+            selectedItemColor: Colors.red,
+            unselectedItemColor: Colors.grey,
+            items: [
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'Home',
+                tooltip: 'Home',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.report),
+                label: 'Report',
+                tooltip: 'Report Incident',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.people),
+                label: 'Welfare',
+                tooltip: 'Welfare Check',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.info),
+                label: 'Evacuation',
+                tooltip: 'Evacuation Centers',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.security),
+                label: 'Safety',
+                tooltip: 'Safety Protocols',
+              ),
+            ],
+            onTap: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+          ),
+        ),
+      );
   }
 }

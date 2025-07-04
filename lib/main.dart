@@ -52,7 +52,7 @@ class ProteqApp extends StatelessWidget {
         '/mode_selection': (context) => const ModeSelectionScreen(),
         '/user_dashboard': (context) => DashboardScreen(),
         '/responder_dashboard': (context) => const ResponderDashboardScreen(),
-        '/report': (context) => ReportIncidentScreen(key: const ValueKey('route_report_incident')),
+        '/report': (context) => const ReportIncidentScreen(key: ValueKey('route_report_incident')),
         '/welfare': (context) => WelfareCheckScreen(key: const ValueKey('route_welfare_check')),
         '/protocols': (context) => const SafetyProtocolsScreen(),
         '/evacuation': (context) => const EvacuationCentersScreen(),

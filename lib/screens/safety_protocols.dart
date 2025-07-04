@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../models/safety_protocol.dart';
+import '../services/safety_protocols_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class SafetyProtocolsScreen extends StatefulWidget {
   const SafetyProtocolsScreen({super.key});
@@ -9,51 +16,11 @@ class SafetyProtocolsScreen extends StatefulWidget {
 }
 
 class _SafetyProtocolsScreenState extends State<SafetyProtocolsScreen> {
-  final List<Protocol> protocols = [
-    Protocol(
-      type: 'Fire',
-      icon: Icons.local_fire_department,
-      color: Colors.red,
-      title: 'Fire Safety',
-      description: 'Procedures for fire emergencies, including evacuation routes and assembly points.',
-      steps: [
-        'Activate the nearest fire alarm pull station.',
-        'Evacuate the building using the nearest exit.',
-        'Proceed to the designated assembly point.'
-      ],
-      attachment: 'Fire Safety Map.pdf',
-      date: DateTime(2025, 6, 7),
-    ),
-    Protocol(
-      type: 'Earthquake',
-      icon: Icons.place,
-      color: Colors.orange,
-      title: 'Earthquake Safety',
-      description: 'Guidelines for staying safe during an earthquake.',
-      steps: [
-        'Drop, Cover, and Hold On.',
-        'Stay away from windows and heavy objects.',
-        'Evacuate only when shaking stops.'
-      ],
-      attachment: 'Earthquake Guide.pdf',
-      date: DateTime(2025, 5, 20),
-    ),
-    Protocol(
-      type: 'Medical',
-      icon: Icons.medical_services,
-      color: Colors.cyan,
-      title: 'Medical Emergency',
-      description: 'Steps to take in case of a medical emergency.',
-      steps: [
-        'Call emergency services immediately.',
-        'Provide first aid if trained.',
-        'Stay with the person until help arrives.'
-      ],
-      attachment: 'First Aid.pdf',
-      date: DateTime(2025, 4, 10),
-    ),
-    // Add more protocols as needed
-  ];
+  List<SafetyProtocol> protocols = [];
+  List<SafetyProtocol> filteredProtocols = [];
+  bool isLoading = true;
+  bool hasError = false;
+  String errorMessage = '';
 
   final List<_FilterChipData> filters = [
     _FilterChipData('All', Icons.apps, Colors.grey[700]!),
@@ -68,13 +35,44 @@ class _SafetyProtocolsScreenState extends State<SafetyProtocolsScreen> {
   String searchQuery = '';
 
   @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      isLoading = true;
+      hasError = false;
+    });
+
+    try {
+      // Only load protocols
+      final protocolsResult = await SafetyProtocolsService.getAllProtocols();
+      print('Protocols loaded: \\${protocolsResult.length}');
+      setState(() {
+        protocols = protocolsResult;
+        isLoading = false;
+        _applyFilters();
+      });
+    } catch (e) {
+      print('Error loading protocols: \\${e.toString()}');
+      setState(() {
+        isLoading = false;
+        hasError = true;
+        errorMessage = 'Failed to load data: \\${e.toString()}';
+      });
+    }
+  }
+
+  void _applyFilters() {
+    filteredProtocols = SafetyProtocolsService.filterProtocolsByType(protocols, selectedFilter);
+    filteredProtocols = SafetyProtocolsService.filterProtocolsBySearch(filteredProtocols, searchQuery);
+    print('Filtered protocols: \\${filteredProtocols.length}');
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final filteredProtocols = protocols.where((protocol) {
-      final matchesFilter = selectedFilter == 'All' || protocol.type == selectedFilter;
-      final matchesSearch = protocol.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          protocol.description.toLowerCase().contains(searchQuery.toLowerCase());
-      return matchesFilter && matchesSearch;
-    }).toList();
 
     return Scaffold(
    
@@ -101,6 +99,7 @@ class _SafetyProtocolsScreenState extends State<SafetyProtocolsScreen> {
                             onPressed: () {
                               setState(() {
                                 searchQuery = '';
+                                _applyFilters();
                               });
                             },
                           )
@@ -109,6 +108,7 @@ class _SafetyProtocolsScreenState extends State<SafetyProtocolsScreen> {
                   onChanged: (value) {
                     setState(() {
                       searchQuery = value;
+                      _applyFilters();
                     });
                   },
                 ),
@@ -128,6 +128,7 @@ class _SafetyProtocolsScreenState extends State<SafetyProtocolsScreen> {
                       onSelected: () {
                         setState(() {
                           selectedFilter = filter.label;
+                          _applyFilters();
                         });
                       },
                     );
@@ -135,62 +136,42 @@ class _SafetyProtocolsScreenState extends State<SafetyProtocolsScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Emergency Contacts Heading
-              const Text(
-                'Emergency Contacts',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red),
-              ),
-              const SizedBox(height: 8),
-              // Emergency Contacts Card
-              Material(
-                elevation: 0,
-                borderRadius: BorderRadius.circular(8),
-                color: const Color(0xFFFFF4CC),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.call, color: Colors.amber, size: 28),
-                      SizedBox(width: 8),
-                      Text('In case of emergency, contact:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Emergency Contacts List
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: const [
-                  _ContactCard(
-                    icon: Icons.local_police,
-                    label: 'Emergency',
-                    value: '911',
-                    color: Colors.red,
-                  ),
-                  _ContactCard(
-                    icon: Icons.security,
-                    label: 'Security',
-                    value: '(555) 123-4567',
-                    color: Colors.purple,
-                  ),
-                  _ContactCard(
-                    icon: Icons.medical_services,
-                    label: 'Medical',
-                    value: '(555) 987-6543',
-                    color: Colors.cyan,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
               // Protocols Heading
               const Text(
                 'Safety Protocols',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red),
               ),
               const SizedBox(height: 8),
+              // Loading and Error States
+              if (isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32.0),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (hasError)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32.0),
+                  child: Column(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red, size: 48),
+                      const SizedBox(height: 12),
+                      Text(
+                        errorMessage,
+                        style: const TextStyle(fontSize: 16, color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadData,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
               // Protocol Cards
-              if (filteredProtocols.isEmpty)
+              else if (filteredProtocols.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32.0),
                   child: Column(
@@ -252,126 +233,176 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class Protocol {
-  final String type;
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String description;
-  final List<String> steps;
-  final String attachment;
-  final DateTime date;
+// Helper function to get icon data from protocol type
+IconData _getIconFromType(String type) {
+  switch (type.toLowerCase()) {
+    case 'fire':
+      return Icons.local_fire_department;
+    case 'earthquake':
+      return Icons.place;
+    case 'medical':
+      return Icons.medical_services;
+    case 'intrusion':
+      return Icons.security;
+    case 'general':
+      return Icons.verified_user;
+    default:
+      return Icons.info;
+  }
+}
 
-  Protocol({
-    required this.type,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.description,
-    required this.steps,
-    required this.attachment,
-    required this.date,
-  });
+// Helper function to get color from protocol type
+Color _getColorFromType(String type) {
+  switch (type.toLowerCase()) {
+    case 'fire':
+      return Colors.red;
+    case 'earthquake':
+      return Colors.orange;
+    case 'medical':
+      return Colors.cyan;
+    case 'intrusion':
+      return Colors.purple;
+    case 'general':
+      return Colors.green;
+    default:
+      return Colors.grey;
+  }
 }
 
 class _ProtocolCard extends StatelessWidget {
-  final Protocol protocol;
+  final SafetyProtocol protocol;
   const _ProtocolCard({required this.protocol});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
-      child: Material(
-        elevation: 2,
-        borderRadius: BorderRadius.circular(12),
+      decoration: BoxDecoration(
         color: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(protocol.icon, color: protocol.color, size: 32),
-                  const SizedBox(width: 10),
-                  Text(protocol.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: protocol.color)),
-                ],
-              ),
-              const SizedBox(height: 8),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title and Type
+            Row(
+              children: [
+                Icon(_getIconFromType(protocol.type), color: _getColorFromType(protocol.type), size: 32),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    protocol.title,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: _getColorFromType(protocol.type)),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getColorFromType(protocol.type).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    protocol.type,
+                    style: TextStyle(
+                      color: _getColorFromType(protocol.type),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Description
+            Text(
+              'Description',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              protocol.description,
+              style: const TextStyle(color: Colors.black87, fontSize: 15),
+            ),
+            const SizedBox(height: 16),
+            // Attachment
+            if (protocol.attachment != null && protocol.attachment!.isNotEmpty) ...[
               Text(
-                protocol.description,
-                style: TextStyle(color: protocol.color, fontSize: 15),
+                'Attachment',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
               ),
-              const SizedBox(height: 16),
-              ...protocol.steps.map((step) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.check_circle, color: protocol.color, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(step, style: TextStyle(color: Colors.black87))),
-                      ],
-                    ),
-                  )),
+              const SizedBox(height: 4),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.attach_file, color: Colors.white),
+                label: const Text('View Attachment', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _getColorFromType(protocol.type),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                ),
+                onPressed: () async {
+                  final url = protocol.attachment!;
+                  print('Attempting to open: $url');
+                  if (await canLaunchUrl(Uri.parse(url))) {
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  } else {
+                    // Download the file
+                    try {
+                      final dir = await getApplicationDocumentsDirectory();
+                      final fileName = url.split('/').last;
+                      final savePath = '${dir.path}/$fileName';
+
+                      await Dio().download(url, savePath);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Downloaded to $savePath')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Download failed: $e')),
+                      );
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+            // Created/Updated Info
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 16, color: Colors.black54),
+                const SizedBox(width: 4),
+                Text(
+                  'Created: ' + (protocol.createdAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.createdAt!) : 'N/A'),
+                  style: const TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+                const SizedBox(width: 16),
+                Icon(Icons.update, size: 16, color: Colors.black54),
+                const SizedBox(width: 4),
+                Text(
+                  'Updated: ' + (protocol.updatedAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.updatedAt!) : 'N/A'),
+                  style: const TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+              ],
+            ),
+            // Created By
+            if (protocol.createdBy != null) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.attach_file, color: Colors.white),
-                    label: Text('View Attachment', style: const TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: protocol.color,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Attachment: \'${protocol.attachment}\'')),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 16),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 16, color: Colors.black54),
-                      const SizedBox(width: 4),
-                      Text(DateFormat('MMMM dd, yyyy').format(protocol.date), style: const TextStyle(color: Colors.black54)),
-                    ],
-                  ),
+                  Icon(Icons.person, size: 16, color: Colors.blueGrey),
+                  const SizedBox(width: 4),
+                  Text('Created by: ${protocol.createdBy}', style: const TextStyle(color: Colors.blueGrey, fontSize: 13)),
                 ],
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ContactCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-  const _ContactCard({required this.icon, required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
-            const SizedBox(height: 2),
-            Text(value, style: TextStyle(fontSize: 13, color: Colors.black54)),
           ],
         ),
       ),

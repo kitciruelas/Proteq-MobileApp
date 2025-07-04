@@ -4,6 +4,8 @@ import '../screens/dashboard.dart';
 import '../responders_screen/r_dashboard.dart';
 import '../api/authentication.dart';
 import '../models/user.dart';
+import '../services/session_service.dart';
+import 'forget_password.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -52,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
           final user = result['user'];
           final userType = user['user_type']?.toString().toLowerCase() ?? '';
           final userObj = User.fromJson(user);
+          await SessionService.storeUser(userObj);
 
           // Navigate based on user type
           if (userType == 'staff' || userType == 'responder') {
@@ -173,7 +176,24 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
+
+                  // 🔻 Forgot Password Button
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ForgetPasswordScreen()),
+                        );
+                      },
+                      child: const Text(
+                        "Forgot Password?",
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ),
 
                   // 🔻 Login Button
                   SizedBox(
