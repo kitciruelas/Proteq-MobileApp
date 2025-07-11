@@ -1,13 +1,10 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import '../models/evacuation_center.dart';
 import 'api_client.dart';
 
 class EvacuationCenterApi {
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://10.0.2.2/api';
+      : 'http://192.168.1.12/api';
 
   // Fetch all evacuation centers
   static Future<Map<String, dynamic>> fetchAllCenters() async {

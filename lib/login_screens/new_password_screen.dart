@@ -4,7 +4,7 @@ import '../api/authentication.dart';
 class NewPasswordScreen extends StatefulWidget {
   final String email;
   final String otp;
-  const NewPasswordScreen({Key? key, required this.email, required this.otp}) : super(key: key);
+  const NewPasswordScreen({super.key, required this.email, required this.otp});
 
   @override
   State<NewPasswordScreen> createState() => _NewPasswordScreenState();

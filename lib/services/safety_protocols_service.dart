@@ -8,14 +8,14 @@ class SafetyProtocolsService {
   static Future<List<SafetyProtocol>> getAllProtocols() async {
     try {
       final result = await SafetyProtocolsApi.getAllProtocols();
-      print('Raw API result: ' + result.toString()); // Debug print
+      print('Raw API result: $result'); // Debug print
       if (result['success'] == true && result['data'] != null) {
         final List<dynamic> protocolsData = result['data'];
         return protocolsData.map((json) => SafetyProtocol.fromJson(json)).toList();
       }
       return [];
     } catch (e) {
-      print('Error in getAllProtocols: ' + e.toString()); // Debug print
+      print('Error in getAllProtocols: $e'); // Debug print
       return [];
     }
   }

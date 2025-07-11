@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/welfare_check_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 import '../api/welfare_check_api.dart';
 import '../models/welfare_check.dart';
-import '../api/api_client.dart';
-import 'package:http/browser_client.dart';
 import '../services/session_service.dart';
 
 class WelfareCheckScreen extends StatefulWidget {

@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 import '../models/safety_protocol.dart';
 import 'api_client.dart';
@@ -8,7 +6,7 @@ import 'package:flutter/foundation.dart';
 class SafetyProtocolsApi {
    static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://10.0.2.2/api';
+      : 'http://192.168.1.12/api';
 
   // Get all safety protocols
   static Future<Map<String, dynamic>> getAllProtocols() async {

@@ -12,7 +12,7 @@ class ResponderDashboardScreen extends StatefulWidget {
 }
 
 class _ResponderDashboardScreenState extends State<ResponderDashboardScreen> {
-  bool _showAlert = true;
+  final bool _showAlert = true;
   int _selectedIndex = 0; 
 
   static const List<String> _titles = [

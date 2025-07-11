@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'signup_step2.dart';
 import 'login_screen.dart';
 import '../api/authentication.dart';
 
@@ -89,157 +88,190 @@ class _SignUpStep3State extends State<SignUpStep3> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Create Account")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Stepper
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
-                StepCircle(index: 1, isActive: true, label: "General Info"),
-                StepCircle(index: 2, isActive: true, label: "Security"),
-                StepCircle(index: 3, isActive: true, label: "Review"),
-              ],
-            ),
-            const SizedBox(height: 24),
+      appBar: AppBar(
+        title: const Text('Sign Up - Step 3'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16).copyWith(bottom: 32),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Stepper
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: const [
+                        StepCircle(index: 1, isActive: true, label: "General Info"),
+                        StepCircle(index: 2, isActive: true, label: "Security"),
+                        StepCircle(index: 3, isActive: true, label: "Review"),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
 
-            const Text(
-              "🔍 Review Your Information",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+                    const Text(
+                      "🔍 Review Your Information",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
 
-            const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-            // General Info Card
-            _buildInfoCard(
-              title: "📁 General Information",
-              content: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Name: ${widget.userData['first_name']} ${widget.userData['last_name']}"),
-                  Text("Email: ${widget.userData['email']}"),
-                  Text("Department: ${widget.userData['department']}"),
-                  Text("College: ${widget.userData['college']}"),
-                  Text("Role: ${widget.userData['user_type']}"),
-                  Text("Profile Picture: ${widget.userData['profile_picture'] ?? 'No file selected'}"),
-                ],
-              ),
-            ),
+                    // General Info Card
+                    _buildInfoCard(
+                      title: "📁 General Information",
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Name: ${widget.userData['first_name']} ${widget.userData['last_name']}", style: const TextStyle(fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text("Email: ${widget.userData['email']}", style: const TextStyle(fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text("Department: ${widget.userData['department']}", style: const TextStyle(fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text("College: ${widget.userData['college']}", style: const TextStyle(fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text("Role: ${widget.userData['user_type']}", style: const TextStyle(fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text("Profile Picture: ${widget.userData['profile_picture'] ?? 'No file selected'}", style: const TextStyle(fontSize: 15)),
+                        ],
+                      ),
+                    ),
 
-            const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-            // Security Info Card
-            _buildInfoCard(
-              title: "🔒 Security Information",
-              content: const Text("Password: ********"),
-            ),
+                    // Security Info Card
+                    _buildInfoCard(
+                      title: "🔒 Security Information",
+                      content: const Text("Password: ********", style: TextStyle(fontSize: 15)),
+                    ),
 
-            const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-            // Privacy Policy Consent
-            _buildInfoCard(
-              title: "📜 Privacy Policy Consent",
-              content: CheckboxListTile(
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                value: isPolicyAgreed,
-                onChanged: (value) => setState(() => isPolicyAgreed = value!),
-                title: const Text.rich(
-                  TextSpan(
-                    text: "I have read and agree to the ",
-                    children: [
-                      TextSpan(
-                        text: "Privacy Policy",
-                        style: TextStyle(
-                          color: Colors.blue,
-                          decoration: TextDecoration.underline,
+                    // Privacy Policy Consent
+                    _buildInfoCard(
+                      title: "📜 Privacy Policy Consent",
+                      content: CheckboxListTile(
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                        value: isPolicyAgreed,
+                        onChanged: _isLoading ? null : (value) => setState(() => isPolicyAgreed = value!),
+                        title: const Text.rich(
+                          TextSpan(
+                            text: "I have read and agree to the ",
+                            children: [
+                              TextSpan(
+                                text: "Privacy Policy",
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                          style: TextStyle(fontSize: 16),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+                    ),
 
-            const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-            // Final Notes
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("✅ Final Step:", style: TextStyle(fontWeight: FontWeight.bold)),
-                  SizedBox(height: 6),
-                  Text("• Please review all information carefully"),
-                  Text("• Ensure all details are accurate"),
-                  Text("• Read and accept the Privacy Policy"),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : () {
-                      Navigator.pop(context); // Go back to Step 2
-                    },
-                    child: const Text("Previous"),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Text("Confirm & Sign Up"),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-            Center(
-              child: TextButton(
-                onPressed: _isLoading ? null : () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  );
-                },
-                child: const Text.rich(
-                  TextSpan(
-                    text: "Already have an account? ",
-                    children: [
-                      TextSpan(
-                        text: "Log In here",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                    // Final Notes
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ],
-                  ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("✅ Final Step:", style: TextStyle(fontWeight: FontWeight.bold)),
+                          SizedBox(height: 6),
+                          Text("• Please review all information carefully"),
+                          Text("• Ensure all details are accurate"),
+                          Text("• Read and accept the Privacy Policy"),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isLoading ? null : () {
+                              Navigator.pop(context); // Go back to Step 2
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: const Text("Previous"),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Text("Confirm & Sign Up", style: TextStyle(fontSize: 16)),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+                    Center(
+                      child: TextButton(
+                        onPressed: _isLoading ? null : () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          );
+                        },
+                        child: const Text.rich(
+                          TextSpan(
+                            text: "Already have an account? ",
+                            children: [
+                              TextSpan(
+                                text: "Log In here",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

@@ -6,7 +6,7 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 
 class OtpScreen extends StatefulWidget {
   final String email;
-  const OtpScreen({Key? key, required this.email}) : super(key: key);
+  const OtpScreen({super.key, required this.email});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -109,7 +109,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 shape: PinCodeFieldShape.box,
                 borderRadius: BorderRadius.circular(8),
                 fieldHeight: 50,
-                fieldWidth: 40,
+                fieldWidth: 50,
                 activeColor: _errorText != null ? Colors.red : Colors.black,
                 selectedColor: Colors.black,
                 inactiveColor: _errorText != null ? Colors.red : Colors.grey,
@@ -131,7 +131,7 @@ class _OtpScreenState extends State<OtpScreen> {
               textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               autoFocus: true,
               showCursor: true,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             ),
             if (_errorText != null) ...[
               const SizedBox(height: 8),

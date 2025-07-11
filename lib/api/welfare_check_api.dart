@@ -1,16 +1,15 @@
+// import 'package:http/http.dart' as http;  // Removed - causes web package issues
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'dart:io';
 import 'package:flutter/foundation.dart';
-import '../models/welfare_check.dart';
 import '../services/session_service.dart';
-import 'authentication.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
+import '../models/welfare_check.dart';
 
 class WelfareCheckApi {
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://10.0.2.2/api';
+      : 'http://192.168.1.12/api';
 
   // Get auth token from SessionService
   static Future<String?> getToken() async {
@@ -27,16 +26,14 @@ class WelfareCheckApi {
     };
   }
 
-
-
   // Helper method to decode and handle HTTP response
-  static Map<String, dynamic> _handleResponse(http.Response response) {
+  static Map<String, dynamic> _handleResponse(HttpClientResponse response, String responseBody) {
     try {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      return jsonDecode(responseBody) as Map<String, dynamic>;
     } catch (_) {
       return {
         'success': false,
-        'message': 'Server error: [200m${response.statusCode}[0m.',
+        'message': 'Server error: ${response.statusCode}.',
       };
     }
   }
@@ -46,9 +43,19 @@ class WelfareCheckApi {
     try {
       final url = Uri.parse('$_baseUrl/controller/Emergencies.php/?is_active=1');
       final headers = await getAuthenticatedHeaders();
-      final response = await http.get(url, headers: headers);
+      
+      final client = HttpClient();
+      final request = await client.getUrl(url);
+      headers.forEach((key, value) {
+        request.headers.set(key, value);
+      });
+      
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+      client.close();
+      
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(responseBody);
         if (data is List) {
           return data;
         } else if (data is Map && data['data'] is List) {

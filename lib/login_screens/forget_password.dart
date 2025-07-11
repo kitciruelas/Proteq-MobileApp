@@ -148,7 +148,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                         ),
                       ),
                       child: const Text(
-                        'Back to sign in',
+                        'Back to log in',
                         style: TextStyle(
                           color: Colors.black87,
                           fontSize: 16,

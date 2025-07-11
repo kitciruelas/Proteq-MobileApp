@@ -126,7 +126,7 @@ class ModeSelectionScreen extends StatelessWidget {
               ),
             ),
             // Responder Mode Button
-            Container(
+            SizedBox(
               width: double.infinity,
               height: 120,
               child: ElevatedButton(

@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:http/browser_client.dart';
+import 'dart:io';
+// import 'package:http/http.dart' as http;  // Removed - causes web package issues
+// import 'package:http/browser_client.dart';  // Removed - causes web package issues
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/incident_report.dart';
 import 'api_client.dart';
 import '../services/session_service.dart';
@@ -11,7 +12,7 @@ class IncidentReportApi {
   // Base URL depending on platform (Web or Android Emulator)
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api' // For web (same machine)
-      : 'http://10.0.2.2/api'; // For Android emulator (maps to localhost)
+      : 'http://192.168.1.12/api'; // For Android emulator (maps to localhost)
 
   // Submit a new incident report - now uses the new ApiClient
   static Future<Map<String, dynamic>> submitIncidentReport(IncidentReport report) async {
@@ -26,19 +27,15 @@ class IncidentReportApi {
   }
 
   // Returns the appropriate HTTP client depending on the platform
-  static http.Client getHttpClient() {
-    if (kIsWeb) {
-      return BrowserClient();
-    } else {
-      return http.Client();
-    }
+  static HttpClient getHttpClient() {
+    return HttpClient();
   }
 
   // Handles HTTP responses and returns a Map
-  static Map<String, dynamic> _handleResponse(http.Response response) {
+  static Map<String, dynamic> _handleResponse(HttpClientResponse response, String responseBody) {
     if (response.statusCode == 200) {
       try {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        return jsonDecode(responseBody) as Map<String, dynamic>;
       } catch (e) {
         return {
           'success': false,
@@ -59,18 +56,22 @@ class IncidentReportApi {
       final url = Uri.parse('$_baseUrl/controller/IncidentReport.php');
       final client = getHttpClient();
       final token = ApiClient.authToken;
-      final headers = {
-        'Content-Type': 'application/json',
-        if (!kIsWeb && token != null) 'Cookie': 'PHPSESSID=$token',
-        if (token != null) 'Authorization': 'Bearer $token',
-      };
-      final response = await client.post(
-        url,
-        headers: headers,
-        body: jsonEncode(report.toJson()),
-      );
+      
+      final request = await client.postUrl(url);
+      request.headers.set('Content-Type', 'application/json');
+      if (!kIsWeb && token != null) {
+        request.headers.set('Cookie', 'PHPSESSID=$token');
+      }
+      if (token != null) {
+        request.headers.set('Authorization', 'Bearer $token');
+      }
+      
+      request.write(jsonEncode(report.toJson()));
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+      
       client.close();
-      return _handleResponse(response);
+      return _handleResponse(response, responseBody);
     } catch (e) {
       return {
         'success': false,
@@ -80,25 +81,26 @@ class IncidentReportApi {
   }
 
   static Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
+    await SessionService.storeToken(token);
   }
 
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    return await SessionService.getToken();
   }
 
   static Future<void> createIncident(String token, Map<String, dynamic> incidentData) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/controller/IncidentReport.php'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(incidentData),
-    );
-    // ... your code ...
+    try {
+      final client = HttpClient();
+      final request = await client.postUrl(Uri.parse('$_baseUrl/controller/IncidentReport.php'));
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Authorization', 'Bearer $token');
+      request.write(jsonEncode(incidentData));
+      final response = await request.close();
+      // Handle response as needed
+      client.close();
+    } catch (e) {
+      // Handle error
+    }
   }
 
   static Future<void> storeToken(String token) async {

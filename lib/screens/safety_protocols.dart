@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 import '../models/safety_protocol.dart';
 import '../services/safety_protocols_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:dio/dio.dart';
+// import 'package:url_launcher/url_launcher.dart';  // Removed - causes web package issues
+// import 'package:http/http.dart' as http;  // Removed - causes web package issues
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
@@ -186,7 +186,7 @@ class _SafetyProtocolsScreenState extends State<SafetyProtocolsScreen> {
                   ),
                 )
               else
-                ...filteredProtocols.map((protocol) => _ProtocolCard(protocol: protocol)).toList(),
+                ...filteredProtocols.map((protocol) => _ProtocolCard(protocol: protocol)),
             ],
           ),
         ),
@@ -350,25 +350,34 @@ class _ProtocolCard extends StatelessWidget {
                 onPressed: () async {
                   final url = protocol.attachment!;
                   print('Attempting to open: $url');
-                  if (await canLaunchUrl(Uri.parse(url))) {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                  } else {
-                    // Download the file
-                    try {
-                      final dir = await getApplicationDocumentsDirectory();
-                      final fileName = url.split('/').last;
-                      final savePath = '${dir.path}/$fileName';
+                  // Download the file
+                  try {
+                    final dir = await getApplicationDocumentsDirectory();
+                    final fileName = url.split('/').last;
+                    final savePath = '${dir.path}/$fileName';
 
-                      await Dio().download(url, savePath);
+                    final httpClient = HttpClient();
+                    final request = await httpClient.getUrl(Uri.parse(url));
+                    final response = await request.close();
 
+                    if (response.statusCode == 200) {
+                      final bytes = await response.fold<List<int>>(
+                        <int>[],
+                        (previous, element) => previous..addAll(element),
+                      );
+                      File(savePath).writeAsBytes(bytes);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Downloaded to $savePath')),
                       );
-                    } catch (e) {
+                    } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Download failed: $e')),
+                        SnackBar(content: Text('Download failed: ${response.statusCode}')),
                       );
                     }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Download failed: $e')),
+                    );
                   }
                 },
               ),
@@ -380,14 +389,14 @@ class _ProtocolCard extends StatelessWidget {
                 Icon(Icons.calendar_today, size: 16, color: Colors.black54),
                 const SizedBox(width: 4),
                 Text(
-                  'Created: ' + (protocol.createdAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.createdAt!) : 'N/A'),
+                  'Created: ${protocol.createdAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.createdAt!) : 'N/A'}',
                   style: const TextStyle(color: Colors.black54, fontSize: 13),
                 ),
                 const SizedBox(width: 16),
                 Icon(Icons.update, size: 16, color: Colors.black54),
                 const SizedBox(width: 4),
                 Text(
-                  'Updated: ' + (protocol.updatedAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.updatedAt!) : 'N/A'),
+                  'Updated: ${protocol.updatedAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.updatedAt!) : 'N/A'}',
                   style: const TextStyle(color: Colors.black54, fontSize: 13),
                 ),
               ],

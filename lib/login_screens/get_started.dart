@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
+// import 'package:url_launcher/url_launcher.dart';  // Removed - causes web package issues
 import 'login_screen.dart'; // Replace with your login screen
-import 'package:url_launcher/url_launcher.dart';
 
 
 class GetStartedScreen extends StatelessWidget {
   const GetStartedScreen({super.key});
 
-    void _launchFacebook() async {
-    const url = 'https://www.facebook.com/batstateu.action'; // Replace with real URL
-    final uri = Uri.parse(url);
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not launch $url';
-    }
+    void _launchFacebook(BuildContext context) async {
+    // Show a dialog instead of launching URL to avoid web package issues
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Learn More'),
+        content: const Text('Visit our Facebook page: https://www.facebook.com/batstateu.action'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
 
@@ -127,7 +133,7 @@ class GetStartedScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: _launchFacebook,
+                      onPressed: () => _launchFacebook(context),
 
                       child: const Text(
                         'Learn More',

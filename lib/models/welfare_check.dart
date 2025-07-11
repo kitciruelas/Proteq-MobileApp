@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 class WelfareCheck {
   final int? welfareId;

@@ -50,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUser() async {
     try {
       // Replace 1 with the actual logged-in user's ID
-      User user = await UserService.fetchUser(1);
+      User? user = await UserService.getUserById(1);
       setState(() {
         _user = user;
         _isLoading = false;

@@ -6,6 +6,7 @@ import '../api/authentication.dart';
 import '../models/user.dart';
 import '../services/session_service.dart';
 import 'forget_password.dart';
+import '../responders_screen/responder_home_tab.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _loginAsStaff = false;
+  final bool _loginAsStaff = false;
 
   @override
   void dispose() {
@@ -53,14 +54,18 @@ class _LoginScreenState extends State<LoginScreen> {
         if (result['success']) {
           final user = result['user'];
           final userType = user['user_type']?.toString().toLowerCase() ?? '';
+          final role = user['role']?.toString().toLowerCase() ?? '';
+          print('DEBUG: userType after login: ' + userType);
+          print('DEBUG: role after login: ' + role);
           final userObj = User.fromJson(user);
           await SessionService.storeUser(userObj);
 
-          // Navigate based on user type
-          if (userType == 'staff' || userType == 'responder') {
+          // Navigate based on user type or staff role
+          if (userType == 'staff' || userType == 'responder' ||
+              role == 'nurse' || role == 'paramedic' || role == 'security' || role == 'firefighter' || role == 'others') {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const ResponderDashboardScreen()),
+              MaterialPageRoute(builder: (context) => const ResponderHomeTab()),
             );
           } else {
             Navigator.pushReplacement(
@@ -170,9 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';
                       }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
+                     
                       return null;
                     },
                   ),

@@ -1,31 +1,69 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/browser_client.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:http/http.dart' as http;  // Removed - causes web package issues
+// import 'package:http/browser_client.dart';  // Removed - causes web package issues
+import 'package:path_provider/path_provider.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost/api';
+  static const String baseUrl = 'http://192.168.1.12/api';
   static String? _authToken;
 
+  // Get the session file
+  static Future<File> _getSessionFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    return File('${directory.path}/session_data.json');
+  }
+
+  // Read session data from file
+  static Future<Map<String, dynamic>> _readSessionData() async {
+    try {
+      final file = await _getSessionFile();
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        return jsonDecode(content) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      print('[ApiClient] Error reading session data: $e');
+    }
+    return {};
+  }
+
+  // Get stored authentication token
+  static Future<String?> _getToken() async {
+    final data = await _readSessionData();
+    return data['auth_token'] as String?;
+  }
+
   // Load token from persistent storage
-  static Future<void> loadAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    _authToken = prefs.getString('auth_token');
+  static Future<void> loadToken() async {
+    _authToken = await _getToken();
   }
 
   // Set authentication token and persist it
   static Future<void> setAuthToken(String token) async {
     _authToken = token;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
+    final data = await _readSessionData();
+    data['auth_token'] = token;
+    await _writeSessionData(data);
+  }
+
+  // Write session data to file
+  static Future<void> _writeSessionData(Map<String, dynamic> data) async {
+    try {
+      final file = await _getSessionFile();
+      await file.writeAsString(jsonEncode(data));
+    } catch (e) {
+      print('[ApiClient] Error writing session data: $e');
+    }
   }
 
   // Clear authentication token from memory and storage
   static Future<void> clearAuthToken() async {
     _authToken = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
+    final data = await _readSessionData();
+    data.remove('auth_token');
+    await _writeSessionData(data);
   }
 
   // Get current authentication token (cached, may be null if not loaded)
@@ -33,8 +71,7 @@ class ApiClient {
 
   // Always fetch the latest token from storage
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    return await _getToken();
   }
 
   // Build authenticated headers
@@ -206,98 +243,77 @@ class ApiClient {
     if (requiresAuth && _authToken != null) {
       headers['Authorization'] = 'Bearer $_authToken';
     }
-    // print('ApiClient: Sending headers: ' + headers.toString()); // Commented out debug print
+    
     try {
-      http.Response response;
-      if (kIsWeb) {
-        final client = BrowserClient();
-        client.withCredentials = true;
-        switch (method.toUpperCase()) {
-          case 'GET':
-            response = await client.get(url, headers: headers);
-            break;
-          case 'POST':
-            response = await client.post(
-              url,
-              headers: headers,
-              body: body != null ? jsonEncode(body) : null,
-            );
-            break;
-          case 'PUT':
-            response = await client.put(
-              url,
-              headers: headers,
-              body: body != null ? jsonEncode(body) : null,
-            );
-            break;
-          case 'DELETE':
-            response = await client.delete(url, headers: headers);
-            break;
-          default:
-            throw Exception('Unsupported HTTP method: $method');
-        }
-      } else {
-        switch (method.toUpperCase()) {
-          case 'GET':
-            response = await http.get(url, headers: headers);
-            break;
-          case 'POST':
-            response = await http.post(
-              url,
-              headers: headers,
-              body: body != null ? jsonEncode(body) : null,
-            );
-            break;
-          case 'PUT':
-            response = await http.put(
-              url,
-              headers: headers,
-              body: body != null ? jsonEncode(body) : null,
-            );
-            break;
-          case 'DELETE':
-            response = await http.delete(url, headers: headers);
-            break;
-          default:
-            throw Exception('Unsupported HTTP method: $method');
-        }
+      final client = HttpClient();
+      HttpClientRequest request;
+      
+      switch (method.toUpperCase()) {
+        case 'GET':
+          request = await client.getUrl(url);
+          break;
+        case 'POST':
+          request = await client.postUrl(url);
+          break;
+        case 'PUT':
+          request = await client.putUrl(url);
+          break;
+        case 'DELETE':
+          request = await client.deleteUrl(url);
+          break;
+        default:
+          throw Exception('Unsupported HTTP method: $method');
       }
+      
+      // Add headers
+      headers.forEach((key, value) {
+        request.headers.set(key, value);
+      });
+      
+      // Add body for POST/PUT requests
+      if (body != null && (method.toUpperCase() == 'POST' || method.toUpperCase() == 'PUT')) {
+        request.write(jsonEncode(body));
+      }
+      
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+      
       if (response.statusCode >= 200 && response.statusCode < 300) {
         try {
-          final decoded = jsonDecode(response.body);
+          final decoded = jsonDecode(responseBody);
           if (decoded is Map<String, dynamic>) {
             return decoded;
           } else {
             return {
               'success': false,
               'message': 'Unexpected response format',
-              'body': response.body,
+              'body': responseBody,
             };
           }
         } catch (e) {
           return {
             'success': false,
             'message': 'Failed to parse response: $e',
-            'body': response.body,
+            'body': responseBody,
           };
         }
       } else {
         try {
-          final errorResponse = jsonDecode(response.body);
+          final errorResponse = jsonDecode(responseBody);
           if (errorResponse is Map<String, dynamic>) {
             return errorResponse;
           } else {
             return {
               'success': false,
               'message': 'Unexpected error response format',
-              'body': response.body,
+              'body': responseBody,
             };
           }
         } catch (e) {
           return {
             'success': false,
             'message': 'HTTP ${response.statusCode}: ${response.reasonPhrase}',
-            'body': response.body,
+            'body': responseBody,
           };
         }
       }
