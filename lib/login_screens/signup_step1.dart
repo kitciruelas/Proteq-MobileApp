@@ -85,15 +85,9 @@ class _SignUpStep1State extends State<SignUpStep1> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign Up - Step 1'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const SignUpAppBar(
+        currentStep: 1,
+        title: 'Sign Up - Step 1',
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard on tap
@@ -112,7 +106,7 @@ class _SignUpStep1State extends State<SignUpStep1> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: const [
-                          StepCircle(index: 1, isActive: true, label: "General Info"),
+                          StepCircle(index: 1, isActive: true, label: "General Information"),
                           StepCircle(index: 2, isActive: false, label: "Security"),
                           StepCircle(index: 3, isActive: false, label: "Review"),
                         ],
@@ -170,7 +164,7 @@ class _SignUpStep1State extends State<SignUpStep1> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                          if (!RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$').hasMatch(value)) {
                             return 'Please enter a valid email';
                           }
                           return null;
@@ -191,7 +185,18 @@ class _SignUpStep1State extends State<SignUpStep1> {
                           DropdownMenuItem(value: "University Employee", child: Text("University Employee")),
                         ],
                         value: selectedRole,
-                        onChanged: (value) => setState(() => selectedRole = value),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedRole = value;
+                            if (value == "University Employee") {
+                              selectedDepartment = "N/A";
+                              selectedCollege = "N/A";
+                            } else {
+                              if (selectedDepartment == "N/A") selectedDepartment = null;
+                              if (selectedCollege == "N/A") selectedCollege = null;
+                            }
+                          });
+                        },
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please select your role';
@@ -207,11 +212,15 @@ class _SignUpStep1State extends State<SignUpStep1> {
                           prefixIcon: Icon(Icons.apartment_outlined),
                           border: OutlineInputBorder(),
                         ),
-                        items: departments.map((dep) {
-                          return DropdownMenuItem(value: dep, child: Text(dep));
-                        }).toList(),
+                        items: (selectedRole == "University Employee")
+                            ? [const DropdownMenuItem(value: "N/A", child: Text("N/A"))]
+                            : departments.map((dep) {
+                                return DropdownMenuItem(value: dep, child: Text(dep));
+                              }).toList(),
                         value: selectedDepartment,
-                        onChanged: (value) => setState(() => selectedDepartment = value),
+                        onChanged: (selectedRole == "University Employee")
+                            ? null
+                            : (value) => setState(() => selectedDepartment = value),
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
@@ -220,15 +229,18 @@ class _SignUpStep1State extends State<SignUpStep1> {
                           prefixIcon: Icon(Icons.school_outlined),
                           border: OutlineInputBorder(),
                         ),
-                        items: colleges.map((col) {
-                          return DropdownMenuItem(value: col, child: Text(col));
-                        }).toList(),
+                        items: (selectedRole == "University Employee")
+                            ? [const DropdownMenuItem(value: "N/A", child: Text("N/A"))]
+                            : colleges.map((col) {
+                                return DropdownMenuItem(value: col, child: Text(col));
+                              }).toList(),
                         value: selectedCollege,
-                        onChanged: (value) => setState(() => selectedCollege = value),
+                        onChanged: (selectedRole == "University Employee")
+                            ? null
+                            : (value) => setState(() => selectedCollege = value),
                       ),
 
                       const SizedBox(height: 4),
-                     
 
                       const SizedBox(height: 32),
                       // Navigation Buttons
@@ -281,16 +293,100 @@ class _SignUpStep1State extends State<SignUpStep1> {
   }
 }
 
+// Add this custom AppBar widget at the top of the file
+class SignUpAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final int currentStep;
+  final String title;
+  final int totalSteps;
+  final VoidCallback? onBack;
+
+  const SignUpAppBar({
+    super.key,
+    required this.currentStep,
+    required this.title,
+    this.totalSteps = 3,
+    this.onBack,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(90);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 4,
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+      color: Colors.red,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.only(top: 32, left: 16, right: 16, bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: onBack ?? () => Navigator.pop(context),
+              child: Image.asset(
+                'assets/images/logo-w.png',
+                height: 40,
+                width: 40 ,
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  // Step indicator
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(totalSteps, (i) {
+                      final isActive = i < currentStep;
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: 18,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isActive ? Colors.white : Colors.white.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 40), // To balance the logo
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class StepCircle extends StatelessWidget {
   final int index;
   final bool isActive;
   final String label;
+  final double size;
 
   const StepCircle({
     super.key,
     required this.index,
     required this.isActive,
     required this.label,
+    this.size = 36,
   });
 
   @override
@@ -298,16 +394,20 @@ class StepCircle extends StatelessWidget {
     return Column(
       children: [
         CircleAvatar(
+          radius: size / 2,
           backgroundColor: isActive ? Colors.blue : Colors.grey[300],
           child: Text(
             index.toString(),
             style: TextStyle(
               color: isActive ? Colors.white : Colors.black,
+              fontSize: size * 0.5,
             ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(label),
+        Text(label,
+          style: TextStyle(fontSize: size * 0.28),
+        ),
       ],
     );
   }

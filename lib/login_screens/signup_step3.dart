@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import '../api/authentication.dart';
+import 'package:flutter/gestures.dart';
+import 'signup_step1.dart'; // Import for SignUpAppBar
 
 class SignUpStep3 extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -14,6 +16,77 @@ class SignUpStep3 extends StatefulWidget {
 class _SignUpStep3State extends State<SignUpStep3> {
   bool isPolicyAgreed = false;
   bool _isLoading = false;
+  final TapGestureRecognizer _privacyPolicyRecognizer = TapGestureRecognizer();
+
+  @override
+  void initState() {
+    super.initState();
+    _privacyPolicyRecognizer.onTap = _showPrivacyPolicyDialog;
+  }
+
+  @override
+  void dispose() {
+    _privacyPolicyRecognizer.dispose();
+    super.dispose();
+  }
+
+  void _showPrivacyPolicyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Privacy Policy'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('Data Collection and Usage', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 6),
+              Text('We collect and process your personal information for the following purposes:'),
+              SizedBox(height: 4),
+              Text('• To create and manage your account'),
+              Text('• To provide you with access to our services'),
+              Text('• To communicate with you about your account and our services'),
+              Text('• To improve our services and user experience'),
+              SizedBox(height: 12),
+              Text('Information We Collect', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 6),
+              Text('• Name and contact information'),
+              Text('• Academic information (department, college, role)'),
+              Text('• Profile picture (optional)'),
+              Text('• Account credentials'),
+              SizedBox(height: 12),
+              Text('Data Protection', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 6),
+              Text('We implement appropriate security measures to protect your personal information:'),
+              Text('• Secure password storage using industry-standard encryption'),
+              Text('• Regular security updates and monitoring'),
+              Text('• Limited access to personal information'),
+              SizedBox(height: 12),
+              Text('Your Rights', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 6),
+              Text('You have the right to:'),
+              Text('• Access your personal information'),
+              Text('• Correct inaccurate data'),
+              Text('• Request deletion of your data'),
+              Text('• Withdraw consent at any time'),
+              SizedBox(height: 12),
+              Text('Contact Information', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 6),
+              Text('For any privacy-related concerns, please contact:'),
+              Text('Email: privacy@proteq.edu'),
+              Text('Phone: (123) 456-7890'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _register() async {
     if (!isPolicyAgreed) {
@@ -88,15 +161,9 @@ class _SignUpStep3State extends State<SignUpStep3> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign Up - Step 3'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const SignUpAppBar(
+        currentStep: 3,
+        title: 'Sign Up - Step 3',
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -160,26 +227,27 @@ class _SignUpStep3State extends State<SignUpStep3> {
 
                     // Privacy Policy Consent
                     _buildInfoCard(
-                      title: "📜 Privacy Policy Consent",
+                      title: "\uD83D\uDCDC Privacy Policy Consent",
                       content: CheckboxListTile(
                         controlAffinity: ListTileControlAffinity.leading,
                         contentPadding: EdgeInsets.zero,
                         value: isPolicyAgreed,
                         onChanged: _isLoading ? null : (value) => setState(() => isPolicyAgreed = value!),
-                        title: const Text.rich(
+                        title: Text.rich(
                           TextSpan(
                             text: "I have read and agree to the ",
                             children: [
                               TextSpan(
                                 text: "Privacy Policy",
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.blue,
                                   decoration: TextDecoration.underline,
                                 ),
+                                recognizer: _privacyPolicyRecognizer,
                               ),
                             ],
                           ),
-                          style: TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: 16),
                         ),
                       ),
                     ),

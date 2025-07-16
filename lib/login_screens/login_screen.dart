@@ -4,6 +4,7 @@ import '../screens/dashboard.dart';
 import '../responders_screen/r_dashboard.dart';
 import '../api/authentication.dart';
 import '../models/user.dart';
+import '../models/staff.dart';
 import '../services/session_service.dart';
 import 'forget_password.dart';
 import '../responders_screen/responder_home_tab.dart';
@@ -60,9 +61,42 @@ class _LoginScreenState extends State<LoginScreen> {
           final userObj = User.fromJson(user);
           await SessionService.storeUser(userObj);
 
-          // Navigate based on user type or staff role
+          // If this is a staff member, also store staff data
           if (userType == 'staff' || userType == 'responder' ||
               role == 'nurse' || role == 'paramedic' || role == 'security' || role == 'firefighter' || role == 'others') {
+            
+            print('[LoginScreen] Processing staff data for user type: $userType, role: $role');
+            print('[LoginScreen] Result keys: ${result.keys.toList()}');
+            
+            // Check if staff data is provided in the response
+            if (result['staff'] != null) {
+              print('[LoginScreen] Using separate staff data from result[staff]');
+              final staffObj = Staff.fromJson(result['staff']);
+              await SessionService.storeStaff(staffObj);
+            } else if (result['user'] != null && (userType == 'staff' || userType == 'responder' || 
+                       role == 'nurse' || role == 'paramedic' || role == 'security' || role == 'firefighter' || role == 'others')) {
+              // Create staff object from user data since API returns staff data in user field
+              print('[LoginScreen] Using user data as staff data from result[user]');
+              print('[LoginScreen] User data: ${result['user']}');
+              final staffObj = Staff.fromJson(result['user']);
+              print('[LoginScreen] Created staff object: ${staffObj.name}, role: ${staffObj.role}, status: ${staffObj.status}');
+              await SessionService.storeStaff(staffObj);
+            } else {
+              // Create staff object from user data if staff data not provided
+              print('[LoginScreen] Creating staff object from user data manually');
+              final staffObj = Staff(
+                staffId: user['staff_id'] ?? user['user_id'] ?? 1,
+                name: '${user['first_name'] ?? ''} ${user['last_name'] ?? ''}'.trim(),
+                email: user['email'] ?? '',
+                role: role.isNotEmpty ? role : 'others',
+                availability: 'available',
+                status: 'active',
+                createdAt: user['created_at'] ?? DateTime.now().toIso8601String(),
+                updatedAt: DateTime.now().toIso8601String(),
+              );
+              await SessionService.storeStaff(staffObj);
+            }
+            
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const ResponderHomeTab()),

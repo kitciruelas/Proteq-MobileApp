@@ -5,8 +5,11 @@ import 'evacuation_centers.dart';
 import 'safety_protocols.dart';
 import 'profile.dart';
 import '../services/user_service.dart';
+import '../services/alerts_service.dart';
 import '../models/user.dart';
+import '../models/alert.dart';
 import '../login_screens/login_screen.dart';
+import 'alerts_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final User? user;
@@ -21,6 +24,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   User? _user;
   bool _isLoadingUser = true;
+  Alert? _currentAlert;
+  bool _isLoadingAlert = true;
 
   static const List<String> _titles = [
     'Home',
@@ -28,6 +33,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'Welfare Check',
     'Evacuation Centers',
     'Safety Protocols',
+  ];
+
+  final List<_SafetyTip> _safetyTips = const [
+    _SafetyTip(
+      title: 'During an Earthquake',
+      description: 'Drop, Cover, and Hold On. Stay away from windows and heavy objects.',
+      type: 'Earthquake',
+    ),
+    _SafetyTip(
+      title: 'Fire Safety',
+      description: 'Use stairs, not elevators. Stay low to avoid smoke. Know your exits.',
+      type: 'Fire',
+    ),
+    _SafetyTip(
+      title: 'Medical Emergency',
+      description: 'Call for help immediately. Provide first aid if trained.',
+      type: 'Medical',
+    ),
+    _SafetyTip(
+      title: 'Intruder Alert',
+      description: 'Lock doors, stay quiet, and hide. Call security if safe to do so.',
+      type: 'Intrusion',
+    ),
+    _SafetyTip(
+      title: 'General Safety',
+      description: 'Be aware of your surroundings. Report suspicious activity.',
+      type: 'General',
+    ),
   ];
 
   @override
@@ -39,6 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else {
       _loadUser();
     }
+    _loadLatestAlert();
   }
 
   Future<void> _loadUser() async {
@@ -52,6 +86,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (e) {
       setState(() {
         _isLoadingUser = false;
+      });
+    }
+  }
+
+  Future<void> _loadLatestAlert() async {
+    try {
+      setState(() {
+        _isLoadingAlert = true;
+      });
+      
+      Alert? latestAlert = await AlertsService.getLatestAlert();
+      setState(() {
+        _currentAlert = latestAlert;
+        _isLoadingAlert = false;
+        _showAlert = latestAlert != null;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingAlert = false;
+        _showAlert = false;
       });
     }
   }
@@ -130,7 +184,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _logout() {
+  void _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (shouldLogout != true) return;
     // Navigate to login screen
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -181,7 +253,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.notifications_none_rounded, size: 28),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AlertsScreen(),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 4),
               GestureDetector(
@@ -203,25 +281,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 const SizedBox(height: 18),
                 // Emergency Alert Card
-                if (_showAlert)
+                if (_isLoadingAlert)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.red[100],
+                        color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(18.0),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Loading alerts...', style: TextStyle(fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else if (_showAlert && _currentAlert != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _getAlertCardColor(_currentAlert!.alertType, _currentAlert!.priority).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: _getAlertCardColor(_currentAlert!.alertType, _currentAlert!.priority).withOpacity(0.3),
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         children: [
                           Padding(
                             padding: const EdgeInsets.all(18.0),
-                            child: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
+                            child: Icon(
+                              _getAlertIcon(_currentAlert!.alertType),
+                              color: _getAlertCardColor(_currentAlert!.alertType, _currentAlert!.priority),
+                              size: 48,
+                            ),
                           ),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text("ALERT: Earthquake Drill at 9:30 AM", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              children: [
+                                Row(
+                                  children: [
+                                    _buildSeverityChip(_currentAlert!.priority),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _currentAlert!.title,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: _getAlertCardColor(_currentAlert!.alertType, _currentAlert!.priority),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (_currentAlert!.message.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _currentAlert!.message,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -300,36 +438,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       const Text('Safety Tips', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                       const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.orange[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange[200]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.lightbulb, color: Colors.orange[700], size: 24),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    'During an Earthquake',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Drop, Cover, and Hold On. Stay away from windows and heavy objects.',
-                                    style: TextStyle(fontSize: 12, color: Colors.black87),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      ..._safetyTips.map((tip) => _buildSafetyTipCard(tip)).toList(),
                     ],
                   ),
                 ),
@@ -463,6 +572,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildSafetyTipCard(_SafetyTip tip) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _getColorFromType(tip.type).withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _getColorFromType(tip.type).withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(_getIconFromType(tip.type), color: _getColorFromType(tip.type), size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tip.title,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _getColorFromType(tip.type)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  tip.description,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildContactRow(String name, String contact, IconData icon) {
     return Row(
       children: [
@@ -493,6 +636,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Color _getAlertColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  IconData _getAlertIcon(String alertType) {
+    switch (alertType.toLowerCase()) {
+      case 'emergency':
+        return Icons.emergency;
+      case 'drill':
+        return Icons.sports_soccer;
+      case 'earthquake':
+        return Icons.vibration;
+      case 'info':
+        return Icons.info;
+      case 'warning':
+        return Icons.warning_amber_rounded;
+      default:
+        return Icons.notifications_active;
+    }
+  }
+
+  Color _getAlertCardColor(String alertType, String priority) {
+    switch (alertType.toLowerCase()) {
+      case 'info':
+        return Colors.blue;
+      case 'warning':
+        return Colors.orange;
+      case 'emergency':
+        return Colors.red;
+      default:
+        return _getAlertColor(priority);
+    }
+  }
+
+  Widget _buildSeverityChip(String severity) {
+    String label;
+    Color color;
+    switch (severity.toLowerCase()) {
+      case 'high':
+      case 'emergency':
+        label = 'EMERGENCY';
+        color = Colors.red;
+        break;
+      case 'warning':
+        label = 'WARNING';
+        color = Colors.orange;
+        break;
+      case 'info':
+        label = 'INFO';
+        color = Colors.blue;
+        break;
+      case 'medium':
+        label = 'MEDIUM';
+        color = Colors.orange;
+        break;
+      case 'low':
+        label = 'LOW';
+        color = Colors.green;
+        break;
+      default:
+        label = severity.toUpperCase();
+        color = Colors.grey;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+
   Widget _getScreen(int index) {
     switch (index) {
       case 0:
@@ -516,13 +749,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         body: SafeArea(
           child: _getScreen(_selectedIndex),
         ),
-        floatingActionButton: _selectedIndex == 0
-            ? FloatingActionButton(
-                onPressed: () {},
-                backgroundColor: Colors.green,
-                child: const Icon(Icons.add),
-              )
-            : null,
         bottomNavigationBar: SafeArea(
           child: BottomNavigationBar(
             type: BottomNavigationBarType.fixed,
@@ -566,5 +792,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       );
+  }
+}
+
+class _SafetyTip {
+  final String title;
+  final String description;
+  final String type;
+  const _SafetyTip({required this.title, required this.description, required this.type});
+}
+
+IconData _getIconFromType(String type) {
+  switch (type.toLowerCase()) {
+    case 'fire':
+      return Icons.local_fire_department;
+    case 'earthquake':
+      return Icons.place;
+    case 'medical':
+      return Icons.medical_services;
+    case 'intrusion':
+      return Icons.security;
+    case 'general':
+      return Icons.verified_user;
+    default:
+      return Icons.info;
+  }
+}
+
+Color _getColorFromType(String type) {
+  switch (type.toLowerCase()) {
+    case 'fire':
+      return Colors.red;
+    case 'earthquake':
+      return Colors.orange;
+    case 'medical':
+      return Colors.cyan;
+    case 'intrusion':
+      return Colors.purple;
+    case 'general':
+      return Colors.green;
+    default:
+      return Colors.grey;
   }
 }

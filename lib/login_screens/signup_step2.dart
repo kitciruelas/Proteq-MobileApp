@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'signup_step3.dart';
+import 'signup_step1.dart'; // Import for SignUpAppBar
 
 class SignUpStep2 extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -69,15 +70,9 @@ class _SignUpStep2State extends State<SignUpStep2> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign Up - Step 2'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: const SignUpAppBar(
+        currentStep: 2,
+        title: 'Sign Up - Step 2',
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),

@@ -42,4 +42,12 @@ class EvacuationCenterService {
       return [];
     }
   }
+
+  // Find nearest center
+  static Future<EvacuationCenter?> getNearestCenter(double userLat, double userLng) async {
+    final centers = await getAllCenters();
+    if (centers.isEmpty) return null;
+    centers.sort((a, b) => a.distanceTo(userLat, userLng).compareTo(b.distanceTo(userLat, userLng)));
+    return centers.first;
+  }
 } 

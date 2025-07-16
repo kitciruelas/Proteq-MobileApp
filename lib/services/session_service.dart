@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../models/user.dart';
+import '../models/staff.dart';
 
 class SessionService {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
+  static const String _staffKey = 'staff_data';
   static const String _lastLoginKey = 'last_login';
   static const String _sessionTimeoutKey = 'session_timeout';
   
@@ -195,5 +197,33 @@ class SessionService {
   // Get the current user (alias for getUser)
   static Future<User?> getCurrentUser() async {
     return getUser();
+  }
+
+  // Store staff data
+  static Future<void> storeStaff(Staff staff) async {
+    final data = await _readSessionData();
+    data[_staffKey] = staff.toJson();
+    await _writeSessionData(data);
+  }
+
+  // Get stored staff data
+  static Future<Staff?> getStaff() async {
+    final data = await _readSessionData();
+    final staffData = data[_staffKey];
+    if (staffData != null) {
+      try {
+        return Staff.fromJson(staffData as Map<String, dynamic>);
+      } catch (e) {
+        // If staff data is corrupted, clear it
+        await clearSession();
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // Get the current staff (alias for getStaff)
+  static Future<Staff?> getCurrentStaff() async {
+    return getStaff();
   }
 } 

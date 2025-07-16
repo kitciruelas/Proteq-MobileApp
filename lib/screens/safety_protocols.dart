@@ -384,23 +384,35 @@ class _ProtocolCard extends StatelessWidget {
               const SizedBox(height: 8),
             ],
             // Created/Updated Info
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: Colors.black54),
-                const SizedBox(width: 4),
-                Text(
-                  'Created: ${protocol.createdAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.createdAt!) : 'N/A'}',
-                  style: const TextStyle(color: Colors.black54, fontSize: 13),
-                ),
-                const SizedBox(width: 16),
-                Icon(Icons.update, size: 16, color: Colors.black54),
-                const SizedBox(width: 4),
-                Text(
-                  'Updated: ${protocol.updatedAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.updatedAt!) : 'N/A'}',
-                  style: const TextStyle(color: Colors.black54, fontSize: 13),
-                ),
-              ],
-            ),
+            Wrap(
+  spacing: 16,
+  runSpacing: 4,
+  crossAxisAlignment: WrapCrossAlignment.center,
+  children: [
+    Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.calendar_today, size: 16, color: Colors.black54),
+        const SizedBox(width: 4),
+        Text(
+          'Created: ${protocol.createdAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.createdAt!) : 'N/A'}',
+          style: const TextStyle(color: Colors.black54, fontSize: 13),
+        ),
+      ],
+    ),
+    Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.update, size: 16, color: Colors.black54),
+        const SizedBox(width: 4),
+        Text(
+          'Updated: ${protocol.updatedAt != null ? DateFormat('MMMM dd, yyyy').format(protocol.updatedAt!) : 'N/A'}',
+          style: const TextStyle(color: Colors.black54, fontSize: 13),
+        ),
+      ],
+    ),
+  ],
+),
             // Created By
             if (protocol.createdBy != null) ...[
               const SizedBox(height: 8),

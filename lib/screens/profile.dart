@@ -107,8 +107,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         createdAt: _user!.createdAt,
       );
 
-      // Update user in service (you'll need to implement this)
-      // await UserService.updateUser(updatedUser);
+      // Debug: print outgoing data
+      print('Updating user: \n' + updatedUser.toJson().toString());
+
+      // Update user in service
+      await UserService.updateUser(updatedUser);
 
       // Close loading dialog
       Navigator.of(context).pop();
@@ -129,11 +132,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       // Close loading dialog
       Navigator.of(context).pop();
-      
+      // Debug: print error
+      print('Profile update error: \n' + e.toString());
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to update profile: ${e.toString()}'),
+          content: Text('Failed to update profile: \n' + e.toString()),
           backgroundColor: Colors.red,
         ),
       );
@@ -201,6 +205,210 @@ class _ProfileScreenState extends State<ProfileScreen> {
         (route) => false,
       );
     }
+  }
+
+  void _showChangePasswordDialog() {
+    final TextEditingController currentPasswordController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+    bool showCurrentPassword = false;
+    bool showNewPassword = false;
+    bool showConfirmPassword = false;
+    String? currentPasswordError;
+    String? newPasswordError;
+    String? confirmPasswordError;
+
+    void clearFields() {
+      currentPasswordController.clear();
+      newPasswordController.clear();
+      confirmPasswordController.clear();
+      currentPasswordError = null;
+      newPasswordError = null;
+      confirmPasswordError = null;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: SingleChildScrollView(
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.lock, color: Colors.red),
+                              const SizedBox(width: 8),
+                              const Text('Change Password', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: currentPasswordController,
+                            obscureText: !showCurrentPassword,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: 'Current Password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              suffixIcon: IconButton(
+                                icon: Icon(showCurrentPassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () => setState(() => showCurrentPassword = !showCurrentPassword),
+                              ),
+                              errorText: currentPasswordError,
+                            ),
+                            onChanged: (_) => setState(() => currentPasswordError = null),
+                            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: newPasswordController,
+                            obscureText: !showNewPassword,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: 'New Password',
+                              prefixIcon: const Icon(Icons.vpn_key),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              suffixIcon: IconButton(
+                                icon: Icon(showNewPassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () => setState(() => showNewPassword = !showNewPassword),
+                              ),
+                              errorText: newPasswordError,
+                            ),
+                            onChanged: (_) => setState(() => newPasswordError = null),
+                            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: confirmPasswordController,
+                            obscureText: !showConfirmPassword,
+                            textInputAction: TextInputAction.done,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm New Password',
+                              prefixIcon: const Icon(Icons.vpn_key_outlined),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              suffixIcon: IconButton(
+                                icon: Icon(showConfirmPassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () => setState(() => showConfirmPassword = !showConfirmPassword),
+                              ),
+                              errorText: confirmPasswordError,
+                            ),
+                            onChanged: (_) => setState(() => confirmPasswordError = null),
+                            onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    side: const BorderSide(color: Colors.red),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: isLoading
+                                      ? null
+                                      : () async {
+                                          setState(() {
+                                            currentPasswordError = null;
+                                            newPasswordError = null;
+                                            confirmPasswordError = null;
+                                          });
+                                          bool valid = true;
+                                          if (currentPasswordController.text.isEmpty) {
+                                            setState(() => currentPasswordError = 'Enter current password');
+                                            valid = false;
+                                          }
+                                          if (newPasswordController.text.length < 6) {
+                                            setState(() => newPasswordError = 'Password must be at least 6 characters');
+                                            valid = false;
+                                          }
+                                          if (confirmPasswordController.text != newPasswordController.text) {
+                                            setState(() => confirmPasswordError = 'Passwords do not match');
+                                            valid = false;
+                                          }
+                                          if (!valid) return;
+                                          setState(() => isLoading = true);
+                                          final result = await UserService.changeUserPassword(
+                                            userId: _user?.userId ?? 0,
+                                            currentPassword: currentPasswordController.text,
+                                            newPassword: newPasswordController.text,
+                                          );
+                                          setState(() => isLoading = false);
+                                          if (result['success'] == true) {
+                                            clearFields();
+                                            Navigator.of(context).pop();
+                                            showDialog(
+                                              context: context,
+                                              barrierDismissible: true,
+                                              builder: (context) => Dialog(
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(24),
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: const [
+                                                      Icon(Icons.check_circle, color: Colors.green, size: 48),
+                                                      SizedBox(height: 16),
+                                                      Text('Password changed successfully!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            if ((result['message'] ?? '').toLowerCase().contains('current')) {
+                                              setState(() => currentPasswordError = result['message']);
+                                            } else {
+                                              setState(() => newPasswordError = result['message'] ?? 'Failed to change password');
+                                            }
+                                          }
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: isLoading
+                                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                      : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildProfileHeader() {
@@ -339,8 +547,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildInfoCard(
             title: 'Academic Information',
             children: [
-              _buildInfoRow('Department', _departmentController, Icons.business),
-              _buildInfoRow('College', _collegeController, Icons.school),
+              _buildInfoRow('Department', null, Icons.business, value: _user?.department ?? ''),
+              _buildInfoRow('College', null, Icons.school, value: _user?.college ?? ''),
               _buildInfoRow('User Type', null, Icons.category, value: _user?.userType ?? ''),
             ],
           ),
@@ -526,24 +734,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildActionRow(
               'Change Password',
               Icons.lock,
-              () {
-                // TODO: Implement change password functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Change password functionality coming soon!')),
-                );
-              },
+              _showChangePasswordDialog,
             ),
-            const Divider(height: 24),
-            _buildActionRow(
-              'Privacy Settings',
-              Icons.privacy_tip,
-              () {
-                // TODO: Implement privacy settings
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Privacy settings coming soon!')),
-                );
-              },
-            ),
+            
             const Divider(height: 24),
             _buildActionRow(
               'Logout',

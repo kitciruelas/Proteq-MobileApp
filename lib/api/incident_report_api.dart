@@ -12,7 +12,7 @@ class IncidentReportApi {
   // Base URL depending on platform (Web or Android Emulator)
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api' // For web (same machine)
-      : 'http://192.168.1.12/api'; // For Android emulator (maps to localhost)
+      : 'http://192.168.1.2/api'; // For Android emulator (maps to localhost)
 
   // Submit a new incident report - now uses the new ApiClient
   static Future<Map<String, dynamic>> submitIncidentReport(IncidentReport report) async {

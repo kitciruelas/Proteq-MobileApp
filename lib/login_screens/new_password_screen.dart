@@ -56,10 +56,10 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    '🔒',
-                    style: TextStyle(fontSize: 48),
-                    textAlign: TextAlign.center,
+                  const Icon(
+                    Icons.lock,
+                    color: Colors.red,
+                    size: 48,
                   ),
                   const SizedBox(height: 16),
                   const Text(

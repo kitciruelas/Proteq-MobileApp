@@ -11,7 +11,7 @@ class AuthenticationApi {
   // Base URL depending on platform (Web or Android Emulator)
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api' // For web (same machine)
-      : 'http://192.168.1.12/api'; // For Android emulator (maps to localhost)
+      : 'http://192.168.1.2/api'; // For Android emulator (maps to localhost)
   
   // Signup API Call
   static Future<Map<String, dynamic>> signup(Map<String, dynamic> userData) async {
@@ -186,6 +186,7 @@ class AuthenticationApi {
   static Future<Map<String, dynamic>> changePassword({
     required String currentPassword,
     required String newPassword,
+    int? staffId,
   }) async {
     try {
       final token = ApiClient.authToken;
@@ -196,14 +197,15 @@ class AuthenticationApi {
           'requiresLogin': true,
         };
       }
-      final url = Uri.parse('$_baseUrl/controller/User/ChangePassword.php');
+      final url = Uri.parse('$_baseUrl/controller/User/StaffChangePassword.php');
       final client = HttpClient();
       final request = await client.postUrl(url);
       request.headers.set('Content-Type', 'application/json');
       request.headers.set('Authorization', 'Bearer $token');
       request.write(jsonEncode({
-        'current_password': currentPassword,
-        'new_password': newPassword,
+        'staff_id': staffId,
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
       }));
       final response = await request.close();
       final responseBody = await response.transform(utf8.decoder).join();
@@ -269,6 +271,42 @@ class AuthenticationApi {
       final request = await client.postUrl(url);
       request.headers.set('Content-Type', 'application/json');
       request.write(jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}));
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+      client.close();
+      return _handleResponse(response, responseBody);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> changeUserPassword({
+    required int userId,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final token = ApiClient.authToken;
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No session token found',
+          'requiresLogin': true,
+        };
+      }
+      final url = Uri.parse('$_baseUrl/controller/User/ChangePassword.php');
+      final client = HttpClient();
+      final request = await client.postUrl(url);
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Authorization', 'Bearer $token');
+      request.write(jsonEncode({
+        'user_id': userId,
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      }));
       final response = await request.close();
       final responseBody = await response.transform(utf8.decoder).join();
       client.close();
