@@ -8,4 +8,8 @@ class WelfareCheckService {
   Future<bool> hasSubmittedWelfareCheck(int userId, int emergencyId) async {
     return await WelfareCheckApi.hasSubmittedWelfareCheck(userId, emergencyId);
   }
+
+  Future<Map<String, dynamic>?> getUserWelfareCheck(int userId, int emergencyId) async {
+    return await WelfareCheckApi.getUserWelfareCheck(userId, emergencyId);
+  }
 }

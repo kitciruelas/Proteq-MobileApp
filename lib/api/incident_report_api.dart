@@ -12,7 +12,7 @@ class IncidentReportApi {
   // Base URL depending on platform (Web or Android Emulator)
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api' // For web (same machine)
-      : 'http://192.168.1.2/api'; // For Android emulator (maps to localhost)
+      : 'http://192.168.1.10/api'; // For Android emulator (maps to localhost)
 
   // Submit a new incident report - now uses the new ApiClient
   static Future<Map<String, dynamic>> submitIncidentReport(IncidentReport report) async {
@@ -71,6 +71,52 @@ class IncidentReportApi {
       final responseBody = await response.transform(utf8.decoder).join();
       
       client.close();
+      return _handleResponse(response, responseBody);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
+    }
+  }
+
+  // Update an existing incident report
+  static Future<Map<String, dynamic>> updateIncident({
+    required int incidentId,
+    String? status,
+    String? priorityLevel,
+    String? reporterSafeStatus,
+    String? notes,
+  }) async {
+    final token = ApiClient.authToken;
+    if (token == null) {
+      return {
+        'success': false,
+        'message': 'Authentication required. Please login first.',
+      };
+    }
+
+    try {
+      final url = Uri.parse('$_baseUrl/controller/IncidentUpdate.php');
+      final client = getHttpClient();
+      final request = await client.postUrl(url);
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Authorization', 'Bearer $token');
+
+      final body = {
+        'action': 'update',
+        'incident_id': incidentId,
+        if (status != null) 'status': status,
+        if (priorityLevel != null) 'priority_level': priorityLevel,
+        if (reporterSafeStatus != null) 'reporter_safe_status': reporterSafeStatus,
+        if (notes != null) 'notes': notes,
+      };
+
+      request.write(jsonEncode(body));
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+      client.close();
+
       return _handleResponse(response, responseBody);
     } catch (e) {
       return {

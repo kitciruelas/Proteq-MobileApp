@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/assigned_incident.dart';
 import '../services/staff_incidents_service.dart';
+import '../api/incident_report_api.dart'; // Added import for IncidentReportApi
 
 class IncidentEditScreen extends StatefulWidget {
   final AssignedIncident incident;
@@ -49,6 +50,13 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
   }
 
   Future<void> _validateIncident() async {
+    if (_incident.incidentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Incident ID is missing! Cannot validate incident.')),
+      );
+      return;
+    }
+   
     if (_selectedValidationStatus == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a validation status')),
@@ -56,24 +64,27 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
       return;
     }
 
-    if (_selectedValidationStatus == 'rejected' && _rejectionReasonController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please provide a rejection reason')),
-      );
-      return;
-    }
 
     setState(() {
       _isSaving = true;
     });
 
+    // Set validation_notes value based on status
+    String validationNotes;
+    if (_selectedValidationStatus == 'validated') {
+      validationNotes = 'Validated by staff';
+    } else if (_selectedValidationStatus == 'rejected') {
+      validationNotes = _rejectionReasonController.text.trim();
+    } else {
+      validationNotes = '';
+    }
+
     try {
       final result = await StaffIncidentsService.validateIncident(
-        reportId: _incident.reportId!,
+        incidentId: _incident.incidentId!,
         validationStatus: _selectedValidationStatus!,
-        rejectionReason: _rejectionReasonController.text.trim().isNotEmpty 
-            ? _rejectionReasonController.text.trim() 
-            : null,
+        rejectionReason: validationNotes, // Always send a string, even if empty
+        validationNotes: validationNotes, // Always send a string, even if empty
       );
 
       if (result['success'] == true) {
@@ -113,34 +124,37 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
   }
 
   Future<void> _updateIncident() async {
+    if (_incident.incidentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Incident ID is missing! Cannot update incident.')),
+      );
+      return;
+    }
     setState(() {
       _isSaving = true;
     });
 
     try {
       final result = await StaffIncidentsService.updateIncident(
-        reportId: _incident.reportId!,
+        incidentId: _incident.incidentId!,
         status: _selectedStatus,
         priorityLevel: _selectedPriorityLevel,
         reporterSafeStatus: _selectedReporterSafeStatus,
-        notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+        notes: _notesController.text, // Always send notes, even if empty
       );
 
       if (result['success'] == true) {
-        // Update local incident
         _incident = _incident.copyWith(
           status: _selectedStatus ?? _incident.status,
           priorityLevel: _selectedPriorityLevel ?? _incident.priorityLevel,
           reporterSafeStatus: _selectedReporterSafeStatus ?? _incident.reporterSafeStatus,
         );
-        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Incident updated successfully'),
             backgroundColor: Colors.green,
           ),
         );
-        
         widget.onIncidentUpdated?.call();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -221,7 +235,7 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                                 ),
                               ),
                               Text(
-                                'Report #${_incident.reportId}',
+                                'Report #${_incident.incidentId}',
                                 style: const TextStyle(
                                   color: Colors.grey,
                                   fontSize: 14,
@@ -331,7 +345,7 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _isSaving ? null : _validateIncident,
+                          onPressed: (_isSaving || _incident.incidentId == null) ? null : _validateIncident,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
@@ -348,7 +362,7 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
             ],
 
             // Edit Section
-            if (_incident.canEdit) ...[
+            if (_incident.canEdit && _incident.validationStatus != 'rejected') ...[
               const Text(
                 'Edit Details',
                 style: TextStyle(
@@ -441,33 +455,54 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Notes
-                      const Text(
-                        'Notes',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _notesController,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: 'Add notes about this incident...',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 16),
-
+                      
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _isSaving ? null : _updateIncident,
+                          onPressed: (_isSaving || _incident.incidentId == null) ? null : _updateIncident,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text('Update Incident'),
+                          child: _isSaving
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text('Updating...'),
+                                  ],
+                                )
+                              : const Text('Update Incident'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (_incident.validationStatus == 'rejected') ...[
+              const SizedBox(height: 24),
+              Card(
+                color: Colors.redAccent.withOpacity(0.1),
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.block, color: Colors.red),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'This incident was rejected and cannot be edited.',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],

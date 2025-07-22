@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 class SafetyProtocolsApi {
    static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://192.168.1.2/api';
+      : 'http://192.168.1.10/api';
 
   // Get all safety protocols
   static Future<Map<String, dynamic>> getAllProtocols() async {

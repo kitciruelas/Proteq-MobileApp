@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// import 'package:url_launcher/url_launcher.dart';  // Removed - causes web package issues
+import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart'; // Replace with your login screen
 
 
@@ -12,8 +12,21 @@ class GetStartedScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Learn More'),
-        content: const Text('Visit our Facebook page: https://www.facebook.com/batstateu.action'),
+        content: const Text('Visit our Facebook page:'),
         actions: [
+          TextButton(
+            onPressed: () async {
+              const url = 'https://www.facebook.com/batstateu.action';
+              if (await canLaunch(url)) {
+                await launch(url);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not open the link')),
+                );
+              }
+            },
+            child: const Text('Go to Facebook'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),

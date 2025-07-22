@@ -13,7 +13,7 @@ class SignUpStep1 extends StatefulWidget {
 class _SignUpStep1State extends State<SignUpStep1> {
   final _formKey = GlobalKey<FormState>();
   String? selectedRole;
-  String? selectedDepartment;
+  String? selectedDepartment; // Program
   String? selectedCollege;
   String? selectedFile;
 
@@ -21,8 +21,54 @@ class _SignUpStep1State extends State<SignUpStep1> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
 
-  final departments = ["ICT", "Engineering", "Nursing"];
-  final colleges = ["BSIT", "BSCpE", "BSN"];
+  // Lipa campus only
+  final List<String> colleges = [
+    "College of Accountancy, Business, Economics and International Hospitality Management (CABEIHM)",
+    "College of Arts and Sciences (CAS)",
+    "College of Computer Studies (CCS)",
+    "College of Engineering (COE)",
+    "College of Industrial Technology (CIT)",
+    "College of Teacher Education (CTE)",
+    // Uncomment if Nursing is confirmed at Lipa: "College of Nursing and Allied Health Sciences (CONAHS)",
+  ];
+
+  final Map<String, List<String>> collegePrograms = {
+    "College of Accountancy, Business, Economics and International Hospitality Management (CABEIHM)": [
+      "BS in Accountancy",
+      "BS in Business Administration (Financial Management)",
+      "BS in Business Administration (Marketing Management)",
+      "BS in Hospitality Management",
+    ],
+    "College of Arts and Sciences (CAS)": [
+      "BS in Psychology",
+      "BS in Biology",
+    ],
+    "College of Computer Studies (CCS)": [
+      "BS in Computer Science",
+      "BS in Information Technology",
+    ],
+    "College of Engineering (COE)": [
+      "BS in Civil Engineering",
+      "BS in Computer Engineering",
+      "BS in Electrical Engineering",
+      "BS in Electronics Engineering",
+      "BS in Industrial Engineering",
+      "BS in Mechanical Engineering",
+    ],
+    "College of Industrial Technology (CIT)": [
+      "BS in Industrial Technology",
+    ],
+    "College of Teacher Education (CTE)": [
+      "Bachelor of Elementary Education",
+      "Bachelor of Secondary Education (English)",
+      "Bachelor of Secondary Education (Math)",
+      "Bachelor of Secondary Education (Science)",
+    ],
+    // Uncomment if Nursing is confirmed at Lipa:
+    // "College of Nursing and Allied Health Sciences (CONAHS)": [
+    //   "BS in Nursing",
+    // ],
+  };
 
   Future<void> _pickFile() async {
     // This method is removed as per the instructions
@@ -56,7 +102,7 @@ class _SignUpStep1State extends State<SignUpStep1> {
     if (selectedCollege == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select your college/course'),
+          content: Text('Please select your college'),
           backgroundColor: Colors.red,
         ),
       );
@@ -106,9 +152,9 @@ class _SignUpStep1State extends State<SignUpStep1> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: const [
-                          StepCircle(index: 1, isActive: true, label: "General Information"),
-                          StepCircle(index: 2, isActive: false, label: "Security"),
-                          StepCircle(index: 3, isActive: false, label: "Review"),
+                          Expanded(child: StepCircle(index: 1, isActive: true, label: "General Information")),
+                          Expanded(child: StepCircle(index: 2, isActive: false, label: "Security")),
+                          Expanded(child: StepCircle(index: 3, isActive: false, label: "Review")),
                         ],
                       ),
                       const SizedBox(height: 28),
@@ -208,36 +254,49 @@ class _SignUpStep1State extends State<SignUpStep1> {
                       // Dropdowns stacked vertically for mobile
                       DropdownButtonFormField<String>(
                         decoration: const InputDecoration(
-                          labelText: "Department",
-                          prefixIcon: Icon(Icons.apartment_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        items: (selectedRole == "University Employee")
-                            ? [const DropdownMenuItem(value: "N/A", child: Text("N/A"))]
-                            : departments.map((dep) {
-                                return DropdownMenuItem(value: dep, child: Text(dep));
-                              }).toList(),
-                        value: selectedDepartment,
-                        onChanged: (selectedRole == "University Employee")
-                            ? null
-                            : (value) => setState(() => selectedDepartment = value),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: "College/Course",
+                          labelText: "College",
                           prefixIcon: Icon(Icons.school_outlined),
                           border: OutlineInputBorder(),
                         ),
+                        isExpanded: true,
                         items: (selectedRole == "University Employee")
                             ? [const DropdownMenuItem(value: "N/A", child: Text("N/A"))]
                             : colleges.map((col) {
-                                return DropdownMenuItem(value: col, child: Text(col));
+                                return DropdownMenuItem(
+                                  value: col,
+                                  child: Text(
+                                    col,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                );
                               }).toList(),
                         value: selectedCollege,
                         onChanged: (selectedRole == "University Employee")
                             ? null
-                            : (value) => setState(() => selectedCollege = value),
+                            : (value) {
+                                setState(() {
+                                  selectedCollege = value;
+                                  selectedDepartment = null; // Reset program when college changes
+                                });
+                              },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: "Program",
+                          prefixIcon: Icon(Icons.apartment_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: (selectedRole == "University Employee" || selectedCollege == null)
+                            ? [const DropdownMenuItem(value: "N/A", child: Text("N/A"))]
+                            : (collegePrograms[selectedCollege] ?? []).map((dep) {
+                                return DropdownMenuItem(value: dep, child: Text(dep));
+                              }).toList(),
+                        value: selectedDepartment,
+                        onChanged: (selectedRole == "University Employee" || selectedCollege == null)
+                            ? null
+                            : (value) => setState(() => selectedDepartment = value),
                       ),
 
                       const SizedBox(height: 4),
@@ -323,52 +382,44 @@ class SignUpAppBar extends StatelessWidget implements PreferredSizeWidget {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
         ),
         padding: const EdgeInsets.only(top: 32, left: 16, right: 16, bottom: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: onBack ?? () => Navigator.pop(context),
-              child: Image.asset(
-                'assets/images/logo-w.png',
-                height: 40,
-                width: 40 ,
-              ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                      letterSpacing: 0.5,
-                    ),
+        child: SizedBox(
+          height: 56, // adjust as needed
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: onBack ?? () => Navigator.pop(context),
+                  child: Image.asset(
+                    'assets/images/logo-w.png',
+                    height: 56,
+                    width: 56,
                   ),
-                  const SizedBox(height: 6),
-                  // Step indicator
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(totalSteps, (i) {
-                      final isActive = i < currentStep;
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        width: 18,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: isActive ? Colors.white : Colors.white.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(width: 40), // To balance the logo
-          ],
+              Align(
+                alignment: Alignment.center,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              // Optional: invisible box to balance right side
+              const Align(
+                alignment: Alignment.centerRight,
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -395,7 +446,7 @@ class StepCircle extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: size / 2,
-          backgroundColor: isActive ? Colors.blue : Colors.grey[300],
+          backgroundColor: isActive ? Colors.red : Colors.grey[300],
           child: Text(
             index.toString(),
             style: TextStyle(

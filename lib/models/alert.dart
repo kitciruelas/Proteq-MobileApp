@@ -82,6 +82,16 @@ class Alert {
   bool get isDrill => alertType.toLowerCase() == 'drill';
   bool get isEarthquake => alertType.toLowerCase() == 'earthquake';
   bool get isInfo => alertType.toLowerCase() == 'info';
+  bool get isTyphoon => alertType.toLowerCase() == 'typhoon';
+  bool get isFlood => alertType.toLowerCase() == 'flood';
+  bool get isFire => alertType.toLowerCase() == 'fire';
+  bool get isEmergencyRelated => 
+    isEmergency || 
+    isEarthquake || 
+    isTyphoon || 
+    isFlood || 
+    isFire || 
+    isHighPriority;
   
   String get priorityColor {
     switch (priority.toLowerCase()) {
@@ -103,7 +113,13 @@ class Alert {
       case 'drill':
         return '🏃';
       case 'earthquake':
-        return '🌋';
+        return '🏚️'; // Changed from '🌋' to '🏚️' for earthquake
+      case 'typhoon':
+        return '🌀';
+      case 'flood':
+        return '🌊';
+      case 'fire':
+        return '🔥';
       case 'info':
         return 'ℹ️';
       case 'warning':

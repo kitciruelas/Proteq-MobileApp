@@ -71,11 +71,32 @@ class AlertsService {
   // Get emergency alerts
   static Future<List<Alert>> getEmergencyAlerts() async {
     try {
+      print('AlertsService: Calling AlertsApi.getEmergencyAlerts()');
       final response = await AlertsApi.getEmergencyAlerts();
+      print('AlertsService: Response received: $response');
       
       if (response['success'] == true && response['data'] != null) {
         final List<dynamic> alertsData = response['data'];
+        print('AlertsService: Found ${alertsData.length} alerts in response');
         return alertsData.map((json) => Alert.fromJson(json)).toList();
+      } else {
+        print('AlertsService: No emergency alerts found, trying to get all active alerts...');
+        // Fallback: Get all active alerts and filter for emergency types
+        final allAlertsResponse = await AlertsApi.getAllActiveAlerts();
+        print('AlertsService: All alerts response: $allAlertsResponse');
+        
+        if (allAlertsResponse['success'] == true && allAlertsResponse['data'] != null) {
+          final List<dynamic> allAlertsData = allAlertsResponse['data'];
+          final allAlerts = allAlertsData.map((json) => Alert.fromJson(json)).toList();
+          
+          // Filter for emergency-related alerts
+          final emergencyAlerts = allAlerts.where((alert) => alert.isEmergencyRelated).toList();
+          
+          print('AlertsService: Filtered ${emergencyAlerts.length} emergency alerts from ${allAlerts.length} total alerts');
+          return emergencyAlerts;
+        } else {
+          print('AlertsService: No alerts found or API error: ${allAlertsResponse['message']}');
+        }
       }
       
       return [];

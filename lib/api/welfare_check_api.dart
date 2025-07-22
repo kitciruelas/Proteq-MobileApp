@@ -9,7 +9,7 @@ import '../models/welfare_check.dart';
 class WelfareCheckApi {
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://192.168.1.2/api';
+      : 'http://192.168.1.10/api';
 
   // Get auth token from SessionService
   static Future<String?> getToken() async {
@@ -64,10 +64,10 @@ class WelfareCheckApi {
           return [];
         }
       } else {
-        return [];
+        throw Exception('Failed to load emergencies: Server responded with status code ${response.statusCode}.');
       }
     } catch (e) {
-      return [];
+      throw Exception('Failed to load emergencies: ${e.toString()}');
     }
   }
 
@@ -87,5 +87,9 @@ class WelfareCheckApi {
 
   static Future<bool> hasSubmittedWelfareCheck(int userId, int emergencyId) async {
     return await ApiClient.hasSubmittedWelfareCheck(userId, emergencyId);
+  }
+
+  static Future<Map<String, dynamic>?> getUserWelfareCheck(int userId, int emergencyId) async {
+    return await ApiClient.getUserWelfareCheck(userId, emergencyId);
   }
 } 

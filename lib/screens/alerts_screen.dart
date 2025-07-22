@@ -3,6 +3,7 @@ import '../models/alert.dart';
 import '../models/safety_protocol.dart';
 import '../services/alerts_service.dart';
 import '../services/safety_protocols_service.dart';
+import 'package:geocoding/geocoding.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({Key? key}) : super(key: key);
@@ -118,6 +119,25 @@ class _AlertsScreenState extends State<AlertsScreen> with SingleTickerProviderSt
     return months[month];
   }
 
+  Future<String> getPlaceName(double lat, double lng) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        return place.locality?.isNotEmpty == true
+            ? place.locality!
+            : place.subAdministrativeArea?.isNotEmpty == true
+                ? place.subAdministrativeArea!
+                : place.administrativeArea?.isNotEmpty == true
+                    ? place.administrativeArea!
+                    : place.country ?? '';
+      }
+    } catch (e) {
+      // ignore error, fallback to empty
+    }
+    return '';
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -187,42 +207,48 @@ class _AlertsScreenState extends State<AlertsScreen> with SingleTickerProviderSt
                         showDialog(
                           context: context,
                           builder: (context) {
-                            return AlertDialog(
-                              title: Row(
-                                children: [
-                                  Icon(_getAlertIcon(alert.alertType), color: _getAlertCardColor(alert.alertType, alert.priority)),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text(alert.title)),
-                                ],
-                              ),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (alert.message.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 8.0),
-                                      child: Text(alert.message),
+                            return FutureBuilder<String>(
+                              future: alert.latitude != null && alert.longitude != null
+                                  ? getPlaceName(alert.latitude!, alert.longitude!)
+                                  : Future.value(''),
+                              builder: (context, snapshot) {
+                                String locationName = snapshot.data ?? '';
+                                return AlertDialog(
+                                  title: Row(
+                                    children: [
+                                      Icon(_getAlertIcon(alert.alertType), color: _getAlertCardColor(alert.alertType, alert.priority)),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: Text(alert.title)),
+                                    ],
+                                  ),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (alert.message.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(bottom: 8.0),
+                                          child: Text(alert.message),
+                                        ),
+                                      Text('Type: \t\t${alert.alertType}'),
+                                      Text('Priority: ${alert.priority}'),
+                                      Text('Date:    ${alert.createdAt != null ? _formatDate(alert.createdAt) : ''}'),
+                                      if (alert.radiusKm != null)
+                                        Text('Radius (km): ${alert.radiusKm}'),
+                                      if (alert.latitude != null && alert.longitude != null)
+                                        Text('Exact Location: '
+                                          + (locationName.isNotEmpty ? locationName : '${alert.latitude}, ${alert.longitude}')
+                                        ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Close'),
                                     ),
-                                  Text('Type: \t	${alert.alertType}'),
-                                  Text('Priority: ${alert.priority}'),
-                                  Text('Date:    ${alert.createdAt != null ? _formatDate(alert.createdAt) : ''}'),
-                                  if (alert.latitude != null)
-                                    Text('Latitude: ${alert.latitude}'),
-                                  if (alert.longitude != null)
-                                    Text('Longitude: ${alert.longitude}'),
-                                  if (alert.radiusKm != null)
-                                    Text('Radius (km): ${alert.radiusKm}'),
-                                  if (alert.latitude != null && alert.longitude != null)
-                                    Text('Exact Location: ${alert.latitude}, ${alert.longitude}'),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Close'),
-                                ),
-                              ],
+                                  ],
+                                );
+                              },
                             );
                           },
                         );

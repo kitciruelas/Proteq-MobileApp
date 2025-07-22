@@ -19,6 +19,7 @@ import '../login_screens/login_screen.dart';
 import '../models/evacuation_center.dart';
 import '../services/evacuation_center_service.dart';
 import 'notifications_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ResponderHomeTab extends StatefulWidget {
   const ResponderHomeTab({super.key});
@@ -382,7 +383,7 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
   }
 
   // Current staff location from GPS
-  LatLng _currentLocation = const LatLng(14.5995, 120.9842); // Default Manila coordinates
+  LatLng _currentLocation = const LatLng(13.9411, 121.1631); // Default BSU Lipa coordinates
   bool _isLocationUpdating = false;
   bool _hasLocationPermission = false;
   bool _gpsPluginAvailable = true; // Now using real GPS
@@ -671,8 +672,8 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
     final lngOffset = (random - 500) / 100000;
     
     final newLocation = LatLng(
-      14.5995 + latOffset, // Manila coordinates with variation
-      120.9842 + lngOffset,
+      13.9411 + latOffset, // BSU Lipa coordinates with variation
+      121.1631 + lngOffset,
     );
 
     setState(() {
@@ -773,36 +774,6 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
         ),
       );
     }
-  }
-
-  /// Manual GPS permission check
-  Future<void> _manualGPSPermissionCheck() async {
-    print('Manual GPS permission check initiated...');
-    
-    // Check if running on emulator
-    if (await _isEmulator()) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('GPS on Emulator'),
-            content: const Text(
-              'You are running on an emulator. GPS functionality may be limited. '
-              'For best results, test on a physical device with GPS enabled.\n\n'
-              'You can set a custom location in the emulator settings.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
-    
-    await _checkLocationPermission();
   }
 
   /// Check if running on emulator
@@ -1224,30 +1195,6 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              icon: const Icon(Icons.check_circle),
-                              label: const Text('Accept'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Accepted incident: ${incident.incidentType}'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
                               icon: const Icon(Icons.directions),
                               label: const Text('Navigate'),
                               style: ElevatedButton.styleFrom(
@@ -1258,14 +1205,45 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              onPressed: () {
+                              onPressed: () async {
                                 Navigator.of(context).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Opening navigation to ${incident.location}'),
-                                    backgroundColor: Colors.blue,
-                                  ),
-                                );
+                                final lat = incident.latitude;
+                                final lng = incident.longitude;
+                                if (lat != null && lng != null) {
+                                  final googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving';
+                                  final uri = Uri.parse(googleMapsUrl);
+                                  try {
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                    } else {
+                                      // Try launching in browser as a fallback
+                                      if (await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                                        // Opened in browser
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Could not launch navigation.'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error launching navigation: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Incident location not available.'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               },
                             ),
                           ),
@@ -1549,7 +1527,7 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => NotificationsScreen(incidents: _assignedIncidents),
+                              builder: (context) => NotificationsScreen(),
                             ),
                           );
                         },
@@ -2082,9 +2060,15 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
                                                         ),
                                                   onPressed: _isLocationUpdating 
                                                       ? null 
-                                                      : (_gpsPluginAvailable 
-                                                          ? (_isLocationTrackingActive ? _stopLocationTracking : _startLocationTracking)
-                                                          : _getSimulatedLocation),
+                                                      : () {
+                                                          if (!_hasLocationPermission) {
+                                                            _checkLocationPermission();
+                                                          } else if (_gpsPluginAvailable) {
+                                                            _isLocationTrackingActive ? _stopLocationTracking() : _startLocationTracking();
+                                                          } else {
+                                                            _getSimulatedLocation();
+                                                          }
+                                                        },
                                                   tooltip: _hasLocationPermission 
                                                       ? (_gpsPluginAvailable 
                                                           ? (_isLocationTrackingActive ? 'Stop GPS Tracking' : 'Start GPS Tracking')

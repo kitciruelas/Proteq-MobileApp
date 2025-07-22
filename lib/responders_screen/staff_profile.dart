@@ -781,10 +781,112 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
             _buildActionRow(
               'Update Availability',
               Icons.access_time,
-              () {
-                // TODO: Implement availability update
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Availability update coming soon!')),
+              () async {
+                if (_staff == null) return;
+                String? newAvailability = _selectedAvailability;
+                bool isLoading = false;
+                String? errorText;
+                await showDialog(
+                  context: context,
+                  barrierDismissible: true,
+                  builder: (context) {
+                    return StatefulBuilder(
+                      builder: (context, setState) {
+                        return AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: const Text('Update Availability'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Select your new availability status:'),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String>(
+                                value: newAvailability,
+                                items: _availabilityOptions.map((option) {
+                                  return DropdownMenuItem(
+                                    value: option,
+                                    child: Text(_getDisplayName('Availability', option) ?? option),
+                                  );
+                                }).toList(),
+                                onChanged: isLoading ? null : (value) {
+                                  setState(() {
+                                    newAvailability = value;
+                                    errorText = null;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  errorText: errorText,
+                                ),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: isLoading
+                                  ? null
+                                  : () async {
+                                      if (newAvailability == null || newAvailability!.isEmpty) {
+                                        setState(() => errorText = 'Please select an availability');
+                                        return;
+                                      }
+                                      setState(() => isLoading = true);
+                                      try {
+                                        final updatedStaff = Staff(
+                                          staffId: _staff!.staffId,
+                                          name: _staff!.name,
+                                          email: _staff!.email,
+                                          role: _staff!.role,
+                                          availability: newAvailability!,
+                                          status: _staff!.status,
+                                          createdAt: _staff!.createdAt,
+                                          updatedAt: DateTime.now().toIso8601String(),
+                                        );
+                                        final result = await StaffService.updateStaff(updatedStaff);
+                                        if (result['success'] == true) {
+                                          setState(() => isLoading = false);
+                                          if (mounted) {
+                                            setState(() {
+                                              _staff = updatedStaff;
+                                              _selectedAvailability = newAvailability;
+                                            });
+                                            await SessionService.storeStaff(updatedStaff);
+                                            Navigator.of(context).pop();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Availability updated successfully!'),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          }
+                                        } else {
+                                          setState(() => isLoading = false);
+                                          setState(() => errorText = result['message'] ?? 'Failed to update availability');
+                                        }
+                                      } catch (e) {
+                                        setState(() => isLoading = false);
+                                        setState(() => errorText = 'Error: ${e.toString()}');
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: isLoading
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Text('Update'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
                 );
               },
             ),

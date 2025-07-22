@@ -4,10 +4,41 @@ import 'package:flutter/foundation.dart';
 class StaffIncidentsApi {
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://192.168.1.2/api';
+      : 'http://192.168.1.10/api';
     
   /// Get incidents assigned to the current staff member
   static Future<Map<String, dynamic>> getAssignedIncidents({
+    String? status,
+    String? priorityLevel, 
+    String? incidentType,
+  }) async {
+    try {
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (status != null) queryParams['status'] = status;
+      if (priorityLevel != null) queryParams['priority_level'] = priorityLevel;
+      if (incidentType != null) queryParams['incident_type'] = incidentType;
+
+      final queryString = queryParams.isNotEmpty 
+          ? '?${queryParams.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}'
+          : '';
+
+      final response = await ApiClient.authenticatedCall(
+        endpoint: '/controller/StaffAssignedIncidents.php$queryString',
+        method: 'GET',
+      );
+
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to get assigned incidents: $e',
+      };
+    }
+  }
+
+  /// Get all assigned incidents (for admin/overview or notifications)
+  static Future<Map<String, dynamic>> getAllAssignedIncidents({
     String? status,
     String? priorityLevel,
     String? incidentType,
@@ -24,18 +55,18 @@ class StaffIncidentsApi {
           : '';
 
       final response = await ApiClient.authenticatedCall(
-        endpoint: '/controller/StaffIncidents.php$queryString',
+        endpoint: '/controller/StaffAllAssignedIncidents.php$queryString',
         method: 'GET',
       );
-
       return response;
     } catch (e) {
       return {
         'success': false,
-        'message': 'Failed to get assigned incidents: $e',
+        'message': 'Failed to get all assigned incidents: $e',
       };
     }
   }
+
 
   /// Update staff location for distance calculations
   static Future<Map<String, dynamic>> updateLocation({
@@ -63,21 +94,35 @@ class StaffIncidentsApi {
 
   /// Validate an incident report
   static Future<Map<String, dynamic>> validateIncident({
-    required int reportId,
+    required int incidentId,
     required String validationStatus, // 'validated' or 'rejected'
     String? rejectionReason,
+    String? validationNotes, // <-- Add this
   }) async {
+    if (incidentId == null) {
+      return {
+        'success': false,
+        'message': 'Incident ID is missing! Cannot validate incident.',
+      };
+    }
     try {
+      final updateFields = <String, dynamic>{
+        'validation_status': validationStatus,
+      };
+      if (rejectionReason != null) {
+        updateFields['rejection_reason'] = rejectionReason;
+      }
+      if (validationNotes != null) {
+        updateFields['validation_notes'] = validationNotes;
+      }
       final response = await ApiClient.authenticatedCall(
-        endpoint: '/controller/StaffIncidents.php?action=validate',
+        endpoint: '/controller/IncidentUpdate.php',
         method: 'POST',
         body: {
-          'report_id': reportId,
-          'validation_status': validationStatus,
-          if (rejectionReason != null) 'rejection_reason': rejectionReason,
+          'incident_id': incidentId,
+          'update_fields': updateFields,
         },
       );
-
       return response;
     } catch (e) {
       return {
@@ -89,28 +134,32 @@ class StaffIncidentsApi {
 
   /// Update incident details (status, priority, reporter safe status)
   static Future<Map<String, dynamic>> updateIncident({
-    required int reportId,
+    required int incidentId,
     String? status,
     String? priorityLevel,
     String? reporterSafeStatus,
     String? notes,
   }) async {
-    try {
-      final body = <String, dynamic>{
-        'report_id': reportId,
+    if (incidentId == null) {
+      return {
+        'success': false,
+        'message': 'Incident ID is missing! Cannot update incident.',
       };
-      
-      if (status != null) body['status'] = status;
-      if (priorityLevel != null) body['priority_level'] = priorityLevel;
-      if (reporterSafeStatus != null) body['reporter_safe_status'] = reporterSafeStatus;
-      if (notes != null) body['notes'] = notes;
-
+    }
+    try {
+      final updateFields = <String, dynamic>{};
+      if (status != null) updateFields['status'] = status;
+      if (priorityLevel != null) updateFields['priority_level'] = priorityLevel;
+      if (reporterSafeStatus != null) updateFields['reporter_safe_status'] = reporterSafeStatus;
+      if (notes != null) updateFields['notes'] = notes;
       final response = await ApiClient.authenticatedCall(
-        endpoint: '/controller/StaffIncidents.php?action=update',
+        endpoint: '/controller/IncidentUpdate.php',
         method: 'POST',
-        body: body,
+        body: {
+          'incident_id': incidentId,
+          'update_fields': updateFields,
+        },
       );
-
       return response;
     } catch (e) {
       return {
@@ -122,17 +171,22 @@ class StaffIncidentsApi {
 
   /// Accept an incident assignment
   static Future<Map<String, dynamic>> acceptIncident({
-    required int reportId,
+    required int incidentId,
   }) async {
+    if (incidentId == null) {
+      return {
+        'success': false,
+        'message': 'Incident ID is missing! Cannot accept incident.',
+      };
+    }
     try {
       final response = await ApiClient.authenticatedCall(
         endpoint: '/controller/StaffIncidents.php?action=accept',
         method: 'POST',
         body: {
-          'report_id': reportId,
+          'incident_id': incidentId,
         },
       );
-
       return response;
     } catch (e) {
       return {
@@ -144,22 +198,25 @@ class StaffIncidentsApi {
 
   /// Start response to an incident
   static Future<Map<String, dynamic>> startResponse({
-    required int reportId,
+    required int incidentId,
     String? estimatedArrivalTime,
   }) async {
+    if (incidentId == null) {
+      return {
+        'success': false,
+        'message': 'Incident ID is missing! Cannot start response.',
+      };
+    }
     try {
       final body = <String, dynamic>{
-        'report_id': reportId,
+        'incident_id': incidentId,
       };
-      
       if (estimatedArrivalTime != null) body['estimated_arrival_time'] = estimatedArrivalTime;
-
       final response = await ApiClient.authenticatedCall(
         endpoint: '/controller/StaffIncidents.php?action=start_response',
         method: 'POST',
         body: body,
       );
-
       return response;
     } catch (e) {
       return {
@@ -171,14 +228,19 @@ class StaffIncidentsApi {
 
   /// Get incident details for editing
   static Future<Map<String, dynamic>> getIncidentDetails({
-    required int reportId,
+    required int incidentId,
   }) async {
+    if (incidentId == null) {
+      return {
+        'success': false,
+        'message': 'Incident ID is missing! Cannot get incident details.',
+      };
+    }
     try {
       final response = await ApiClient.authenticatedCall(
-        endpoint: '/controller/StaffIncidents.php?action=details&report_id=$reportId',
+        endpoint: '/controller/StaffIncidents.php?action=details&incident_id=$incidentId',
         method: 'GET',
       );
-
       return response;
     } catch (e) {
       return {

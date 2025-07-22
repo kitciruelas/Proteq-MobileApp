@@ -7,6 +7,7 @@ class IncidentDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('Incident details: ' + incident.toString()); // Debug print
     return Scaffold(
       appBar: AppBar(
         title: Text('Incident Details'),
@@ -50,6 +51,17 @@ class IncidentDetailsScreen extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            _DetailRow(
+              label: 'Incident ID',
+              value: (incident.incidentId != null && incident.incidentId != 0)
+                  ? incident.incidentId.toString()
+                  : 'Missing ID!',
+              icon: Icons.confirmation_number,
+              color: (incident.incidentId != null && incident.incidentId != 0)
+                  ? Colors.deepPurple
+                  : Colors.red,
+            ),
             const SizedBox(height: 24),
             Text('Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 6),
@@ -60,7 +72,6 @@ class IncidentDetailsScreen extends StatelessWidget {
               _DetailRow(label: 'Distance', value: incident.formattedDistance, icon: Icons.straighten, color: Colors.green),
             _DetailRow(label: 'Status', value: incident.status, icon: Icons.info, color: incident.statusColor),
             _DetailRow(label: 'Priority', value: incident.priorityLevel, icon: Icons.priority_high, color: incident.priorityColor),
-            _DetailRow(label: 'Safety Status', value: incident.safetyStatus, icon: Icons.health_and_safety, color: Colors.blue),
             _DetailRow(label: 'Validation', value: incident.validationStatus, icon: Icons.verified, color: incident.validationStatusColor),
             _DetailRow(label: 'Reporter Safe', value: incident.reporterSafeStatus, icon: Icons.person, color: incident.reporterSafeStatusColor),
             if (incident.createdAt != null)

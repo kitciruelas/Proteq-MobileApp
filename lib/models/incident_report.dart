@@ -1,5 +1,5 @@
 class IncidentReport {
-  final int? reportId;
+  final int? incidentId;
   final int userId;
   final String incidentType;
   final String description;
@@ -13,9 +13,10 @@ class IncidentReport {
   final String? updatedAt;
   final String? reporterName;
   final String? reporterEmail;
+  final String? validationNotes;
 
   IncidentReport({
-    this.reportId,
+    this.incidentId,
     required this.userId,
     required this.incidentType,
     required this.description,
@@ -29,11 +30,12 @@ class IncidentReport {
     this.updatedAt,
     this.reporterName,
     this.reporterEmail,
+    this.validationNotes,
   });
 
   factory IncidentReport.fromJson(Map<String, dynamic> json) {
     return IncidentReport(
-      reportId: json['report_id'],
+      incidentId: json['report_id'] ?? json['id'],
       userId: json['user_id'] ?? 0,
       incidentType: json['incident_type'] ?? '',
       description: json['description'] ?? '',
@@ -47,12 +49,13 @@ class IncidentReport {
       updatedAt: json['updated_at'],
       reporterName: json['reporter_name'],
       reporterEmail: json['reporter_email'],
+      validationNotes: json['validation_notes'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'report_id': reportId,
+      'incident_id': incidentId,
       'user_id': userId,
       'incident_type': incidentType,
       'description': description,
@@ -66,6 +69,7 @@ class IncidentReport {
       'updated_at': updatedAt,
       'reporter_name': reporterName,
       'reporter_email': reporterEmail,
+      'validation_notes': validationNotes,
     };
   }
 
@@ -79,6 +83,7 @@ class IncidentReport {
       'latitude': latitude,
       'priority_level': priorityLevel,
       'safety_status': safetyStatus,
+      'validation_notes': validationNotes,
     };
   }
 } 

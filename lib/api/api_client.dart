@@ -6,7 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://192.168.1.2/api';
+  static const String baseUrl = 'http://192.168.1.10/api';
+  
   static String? _authToken;
 
   // Get the session file
@@ -335,12 +336,23 @@ class ApiClient {
 
   static Future<bool> hasSubmittedWelfareCheck(int userId, int emergencyId) async {
     final response = await authenticatedCall(
-      endpoint: '/controller/WelfareCheck.php?user_id=$userId&emergency_id=$emergencyId',
+      endpoint: '/controller/WelfareCheck.php?check_responded=1&emergency_id=$emergencyId&user_id=$userId',
       method: 'GET',
     );
-    if (response['success'] == true && response['data'] is List && response['data'].isNotEmpty) {
+    if (response['success'] == true && response['has_responded'] == true) {
       return true;
     }
     return false;
+  }
+
+  static Future<Map<String, dynamic>?> getUserWelfareCheck(int userId, int emergencyId) async {
+    final response = await authenticatedCall(
+      endpoint: '/controller/WelfareCheck.php?get_response=1&emergency_id=$emergencyId&user_id=$userId',
+      method: 'GET',
+    );
+    if (response['success'] == true && response['response'] != null) {
+      return response['response'] as Map<String, dynamic>;
+    }
+    return null;
   }
 } 

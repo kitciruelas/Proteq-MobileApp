@@ -211,278 +211,298 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHomeTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Top Bar (fixed, full width)
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.red.shade50,
-                Colors.white,
+    return Container(
+      color: const Color(0xFFF7F8FA), // Professional, light neutral background
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Bar (fixed, full width)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Row(
-            children: [
-              const SizedBox(width: 20),
-              Image.asset(
-                'assets/images/logo-r.png',
-                height: 40,
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Proteq',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.notifications_none_rounded, size: 28),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const AlertsScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTapDown: _toggleProfileDropdown,
-                child: CircleAvatar(
-                  backgroundColor: Colors.grey.shade200,
-                  child: Icon(Icons.person, color: Colors.grey.shade700),
-                ),
-              ),
-              const SizedBox(width: 20),
-            ],
-          ),
-        ),
-        // Scrollable content
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Row(
               children: [
-                const SizedBox(height: 18),
-                // Emergency Alert Card
-                if (_isLoadingAlert)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(18),
+                const SizedBox(width: 24),
+                Image.asset(
+                  'assets/images/logo-r.png',
+                  height: 44,
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Proteq',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded, size: 30),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const AlertsScreen(),
                       ),
-                      child: const Padding(
-                        padding: EdgeInsets.all(18.0),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTapDown: _toggleProfileDropdown,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.grey.shade100,
+                    radius: 22,
+                    child: Icon(Icons.person, color: Colors.grey.shade700, size: 26),
+                  ),
+                ),
+                const SizedBox(width: 24),
+              ],
+            ),
+          ),
+          // Scrollable content
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
+                    // Emergency Alert Card
+                    if (_isLoadingAlert)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.all(22.0),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 14),
+                              Text('Loading alerts...', style: TextStyle(fontSize: 15)),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (_showAlert && _currentAlert != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 18),
+                        decoration: BoxDecoration(
+                          color: _getAlertColor(_currentAlert!.priority).withOpacity(0.90),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: _getAlertColor(_currentAlert!.priority),
+                            width: 1.4,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _getAlertColor(_currentAlert!.priority).withOpacity(0.25),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
                             ),
-                            SizedBox(width: 12),
-                            Text('Loading alerts...', style: TextStyle(fontSize: 14)),
                           ],
                         ),
-                      ),
-                    ),
-                  )
-                else if (_showAlert && _currentAlert != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: _getAlertCardColor(_currentAlert!.alertType, _currentAlert!.priority).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: _getAlertCardColor(_currentAlert!.alertType, _currentAlert!.priority).withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(18.0),
-                            child: Icon(
-                              _getAlertIcon(_currentAlert!.alertType),
-                              color: _getAlertCardColor(_currentAlert!.alertType, _currentAlert!.priority),
-                              size: 48,
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    _buildSeverityChip(_currentAlert!.priority),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        _currentAlert!.title,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: _getAlertCardColor(_currentAlert!.alertType, _currentAlert!.priority),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.13),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.10),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
-                                if (_currentAlert!.message.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _currentAlert!.message,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
+                                padding: const EdgeInsets.all(10),
+                                child: Icon(
+                                  _getAlertIcon(_currentAlert!.alertType),
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 52.0, top: 12, bottom: 12, left: 0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            _buildSeverityChip(_currentAlert!.priority),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          _currentAlert!.title,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 20,
+                                            color: Colors.white,
+                                            letterSpacing: 0.1,
+                                            height: 1.2,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (_currentAlert!.message.isNotEmpty) ...[
+                                          const SizedBox(height: 14),
+                                          Padding(
+                                            padding: const EdgeInsets.all(2.0),
+                                            child: Text(
+                                              _currentAlert!.message,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.white,
+                                                height: 1.5,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                              maxLines: 8,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Material(
+                                      color: Colors.white.withOpacity(0.13),
+                                      shape: const CircleBorder(),
+                                      child: InkWell(
+                                        customBorder: const CircleBorder(),
+                                        onTap: () {
+                                          setState(() {
+                                            _showAlert = false;
+                                          });
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Icon(Icons.close, size: 26, color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
+                          ],
+                        ),
+                      ),
+                    // Quick Actions
+                    const SizedBox(height: 10),
+                    Text('Quick Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, letterSpacing: 0.2)),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildQuickActionCard(
+                            icon: Icons.emergency,
+                            title: 'Report\nIncident',
+                            color: Colors.red,
+                            onTap: () {
                               setState(() {
-                                _showAlert = false;
+                                _selectedIndex = 1;
                               });
                             },
                           ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildQuickActionCard(
+                            icon: Icons.health_and_safety,
+                            title: 'Welfare\nCheck',
+                            color: Colors.green,
+                            onTap: () {
+                              setState(() {
+                                _selectedIndex = 2;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildQuickActionCard(
+                            icon: Icons.location_on,
+                            title: 'Find\nShelter',
+                            color: Colors.blue,
+                            onTap: () {
+                              setState(() {
+                                _selectedIndex = 3;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    // Safety Tips
+                    Text('Safety Tips', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, letterSpacing: 0.2)),
+                    const SizedBox(height: 14),
+                    ..._safetyTips.map((tip) => _buildSafetyTipCard(tip)).toList(),
+                    const SizedBox(height: 28),
+                    // Emergency Contacts
+                    Text('Emergency Contacts', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, letterSpacing: 0.2)),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          _buildContactRow('Campus Security', '911', Icons.security),
+                          const Divider(height: 20),
+                          _buildContactRow('Health Center', '(555) 123-4567', Icons.local_hospital),
+                          const Divider(height: 20),
+                          _buildContactRow('Emergency Hotline', '1-800-EMERGENCY', Icons.phone),
                         ],
                       ),
                     ),
-                  ),
-                const SizedBox(height: 24),
-                // Quick Actions
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Quick Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildQuickActionCard(
-                              icon: Icons.emergency,
-                              title: 'Report\nIncident',
-                              color: Colors.red,
-                              onTap: () {
-                                setState(() {
-                                  _selectedIndex = 1;
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildQuickActionCard(
-                              icon: Icons.health_and_safety,
-                              title: 'Welfare\nCheck',
-                              color: Colors.green,
-                              onTap: () {
-                                setState(() {
-                                  _selectedIndex = 2;
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildQuickActionCard(
-                              icon: Icons.location_on,
-                              title: 'Find\nShelter',
-                              color: Colors.blue,
-                              onTap: () {
-                                setState(() {
-                                  _selectedIndex = 3;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 32),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                // Safety Tips
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Safety Tips', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      const SizedBox(height: 12),
-                      ..._safetyTips.map((tip) => _buildSafetyTipCard(tip)).toList(),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Emergency Contacts
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Emergency Contacts', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            _buildContactRow('Campus Security', '911', Icons.security),
-                            const Divider(height: 16),
-                            _buildContactRow('Health Center', '(555) 123-4567', Icons.local_hospital),
-                            const Divider(height: 16),
-                            _buildContactRow('Emergency Hotline', '1-800-EMERGENCY', Icons.phone),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -542,27 +562,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      elevation: 2,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 4,
+      shadowColor: color.withOpacity(0.10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 8),
           child: Column(
             children: [
               CircleAvatar(
-                backgroundColor: color.withOpacity(0.1),
-                radius: 20,
-                child: Icon(icon, color: color, size: 24),
+                backgroundColor: color.withOpacity(0.13),
+                radius: 24,
+                child: Icon(icon, color: color, size: 28),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  letterSpacing: 0.1,
                 ),
               ),
             ],
@@ -639,7 +661,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Color _getAlertColor(String priority) {
     switch (priority.toLowerCase()) {
       case 'high':
+      case 'emergency':
         return Colors.red;
+      case 'warning':
+        return Colors.amber;
+      case 'info':
+        return Colors.blue;
       case 'medium':
         return Colors.orange;
       case 'low':
@@ -681,47 +708,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildSeverityChip(String severity) {
     String label;
-    Color color;
+    Color color = _getAlertColor(severity); // Use the same color mapping as the card
+    IconData? chipIcon;
     switch (severity.toLowerCase()) {
       case 'high':
       case 'emergency':
         label = 'EMERGENCY';
-        color = Colors.red;
+        chipIcon = Icons.warning_amber_rounded;
         break;
       case 'warning':
         label = 'WARNING';
-        color = Colors.orange;
+        chipIcon = Icons.error_outline;
         break;
       case 'info':
         label = 'INFO';
-        color = Colors.blue;
+        chipIcon = Icons.info_outline;
         break;
       case 'medium':
         label = 'MEDIUM';
-        color = Colors.orange;
+        chipIcon = Icons.priority_high;
         break;
       case 'low':
         label = 'LOW';
-        color = Colors.green;
+        chipIcon = Icons.check_circle_outline;
         break;
       default:
         label = severity.toUpperCase();
         color = Colors.grey;
+        chipIcon = null;
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white, // White background
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color.withOpacity(0.7), width: 1),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-          letterSpacing: 1,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (chipIcon != null) ...[
+            Icon(chipIcon, color: color, size: 16),
+            const SizedBox(width: 5),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -746,52 +785,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: SafeArea(
-          child: _getScreen(_selectedIndex),
-        ),
-        bottomNavigationBar: SafeArea(
-          child: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _selectedIndex,
-            selectedFontSize: 14,
-            unselectedFontSize: 12,
-            selectedItemColor: Colors.red,
-            unselectedItemColor: Colors.grey,
-            items: [
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: 'Home',
-                tooltip: 'Home',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.report),
-                label: 'Report',
-                tooltip: 'Report Incident',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.people),
-                label: 'Welfare',
-                tooltip: 'Welfare Check',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.info),
-                label: 'Evacuation',
-                tooltip: 'Evacuation Centers',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.security),
-                label: 'Safety',
-                tooltip: 'Safety Protocols',
+      body: SafeArea(
+        child: _getScreen(_selectedIndex),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.only(left: 18, right: 18, bottom: 8),
+          decoration: BoxDecoration(
+            color: Colors.white, // solid, not transparent
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
               ),
             ],
-            onTap: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(5, (index) {
+              final isSelected = _selectedIndex == index;
+              final iconData = [
+                Icons.home,
+                Icons.report,
+                Icons.people,
+                Icons.info,
+                Icons.security,
+              ][index];
+              final label = [
+                'Home',
+                'Report',
+                'Welfare',
+                'Center',
+                'Safety',
+              ][index];
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(vertical: 0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          iconData,
+                          size: isSelected ? 28 : 24,
+                          color: isSelected ? Colors.red : Colors.grey[500],
+                        ),
+                        const SizedBox(height: 2),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: isSelected
+                              ? Text(
+                                  label,
+                                  key: ValueKey(label),
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                )
+                              : const SizedBox(height: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
         ),
-      );
+      ),
+    );
   }
 }
 

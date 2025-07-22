@@ -82,15 +82,17 @@ class StaffIncidentsService {
 
   /// Validate an incident report
   static Future<Map<String, dynamic>> validateIncident({
-    required int reportId,
+    required int incidentId,
     required String validationStatus,
     String? rejectionReason,
+    String? validationNotes,
   }) async {
     try {
       final result = await StaffIncidentsApi.validateIncident(
-        reportId: reportId,
+        incidentId: incidentId,
         validationStatus: validationStatus,
         rejectionReason: rejectionReason,
+        validationNotes: validationNotes,
       );
       
       // Check for authentication errors
@@ -115,7 +117,7 @@ class StaffIncidentsService {
 
   /// Update incident details
   static Future<Map<String, dynamic>> updateIncident({
-    required int reportId,
+    required int incidentId,
     String? status,
     String? priorityLevel,
     String? reporterSafeStatus,
@@ -123,7 +125,7 @@ class StaffIncidentsService {
   }) async {
     try {
       final result = await StaffIncidentsApi.updateIncident(
-        reportId: reportId,
+        incidentId: incidentId,
         status: status,
         priorityLevel: priorityLevel,
         reporterSafeStatus: reporterSafeStatus,
@@ -152,11 +154,11 @@ class StaffIncidentsService {
 
   /// Accept an incident assignment
   static Future<Map<String, dynamic>> acceptIncident({
-    required int reportId,
+    required int incidentId,
   }) async {
     try {
       final result = await StaffIncidentsApi.acceptIncident(
-        reportId: reportId,
+        incidentId: incidentId,
       );
       
       // Check for authentication errors
@@ -181,12 +183,12 @@ class StaffIncidentsService {
 
   /// Start response to an incident
   static Future<Map<String, dynamic>> startResponse({
-    required int reportId,
+    required int incidentId,
     String? estimatedArrivalTime,
   }) async {
     try {
       final result = await StaffIncidentsApi.startResponse(
-        reportId: reportId,
+        incidentId: incidentId,
         estimatedArrivalTime: estimatedArrivalTime,
       );
       
@@ -212,11 +214,11 @@ class StaffIncidentsService {
 
   /// Get incident details for editing
   static Future<Map<String, dynamic>> getIncidentDetails({
-    required int reportId,
+    required int incidentId,
   }) async {
     try {
       final result = await StaffIncidentsApi.getIncidentDetails(
-        reportId: reportId,
+        incidentId: incidentId,
       );
       
       // Check for authentication errors

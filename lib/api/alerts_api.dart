@@ -37,7 +37,7 @@ class AlertsApi {
   // Get emergency alerts (high priority)
   static Future<Map<String, dynamic>> getEmergencyAlerts() async {
     return await ApiClient.authenticatedCall(
-      endpoint: '/controller/Alerts.php/by-type?type=emergency',
+      endpoint: '/controller/Alerts.php/emergency',
       method: 'GET',
     );
   }

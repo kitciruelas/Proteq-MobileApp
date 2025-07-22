@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AssignedIncident {
-  final int? reportId;
+  final int? incidentId;
   final int userId;
   final String incidentType;
   final String description;
@@ -29,7 +29,7 @@ class AssignedIncident {
   final String reporterSafeStatus;
 
   AssignedIncident({
-    this.reportId,
+    this.incidentId,
     required this.userId,
     required this.incidentType,
     required this.description,
@@ -55,8 +55,10 @@ class AssignedIncident {
 
   factory AssignedIncident.fromJson(Map<String, dynamic> json) {
     return AssignedIncident(
-      reportId: json['report_id'],
-      userId: json['user_id'] ?? 0,
+      incidentId: json['incident_id'] != null
+          ? int.tryParse(json['incident_id'].toString())
+          : (json['id'] != null ? int.tryParse(json['id'].toString()) : null),
+      userId: json['user_id'] ?? json['reported_by'] ?? 0,
       incidentType: json['incident_type'] ?? '',
       description: json['description'] ?? '',
       location: json['location'] ?? '',
@@ -65,15 +67,17 @@ class AssignedIncident {
       priorityLevel: json['priority_level'] ?? 'moderate',
       safetyStatus: json['safety_status'] ?? '',
       status: json['status'] ?? 'pending',
-      createdAt: json['created_at'],
+      createdAt: json['created_at'] ?? json['date_reported'],
       updatedAt: json['updated_at'],
-      reporterName: json['reporter_name'],
+      reporterName: json['reporter_name'] ?? ((json['reporter_first_name'] != null || json['reporter_last_name'] != null) ? '${json['reporter_first_name'] ?? ''} ${json['reporter_last_name'] ?? ''}'.trim() : null),
       reporterEmail: json['reporter_email'],
-      assignedStaffId: json['assigned_staff_id'],
+      assignedStaffId: json['assigned_staff_id'] ?? json['assigned_to'],
       assignedStaffName: json['assigned_staff_name'],
-      assignedStaffType: json['assigned_staff_type'],
+      assignedStaffType: json['assigned_staff_type'] ?? json['assigned_staff_role'],
       assignedAt: json['assigned_at'],
-      distance: json['distance'] != null ? double.tryParse(json['distance'].toString()) : null,
+      distance: json['distance'] != null
+          ? double.tryParse(json['distance'].toString())
+          : (json['distance_km'] != null ? double.tryParse(json['distance_km'].toString()) : null),
       estimatedArrivalTime: json['estimated_arrival_time'],
       validationStatus: json['validation_status'] ?? 'unvalidated',
       reporterSafeStatus: json['reporter_safe_status'] ?? 'unknown',
@@ -82,7 +86,7 @@ class AssignedIncident {
 
   Map<String, dynamic> toJson() {
     return {
-      'report_id': reportId,
+      'incident_id': incidentId,
       'user_id': userId,
       'incident_type': incidentType,
       'description': description,
@@ -109,7 +113,7 @@ class AssignedIncident {
 
   /// Create a copy with updated fields
   AssignedIncident copyWith({
-    int? reportId,
+    int? incidentId,
     int? userId,
     String? incidentType,
     String? description,
@@ -133,7 +137,7 @@ class AssignedIncident {
     String? reporterSafeStatus,
   }) {
     return AssignedIncident(
-      reportId: reportId ?? this.reportId,
+      incidentId: incidentId ?? this.incidentId,
       userId: userId ?? this.userId,
       incidentType: incidentType ?? this.incidentType,
       description: description ?? this.description,

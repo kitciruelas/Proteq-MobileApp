@@ -187,16 +187,23 @@ class _SignUpStep3State extends State<SignUpStep3> {
                     ),
                     const SizedBox(height: 28),
 
-                    const Text(
-                      "🔍 Review Your Information",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        Icon(Icons.search, size: 20, color: Colors.grey[700]),
+                        SizedBox(width: 6),
+                        Text(
+                          "Review Your Information",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 16),
 
                     // General Info Card
                     _buildInfoCard(
-                      title: "📁 General Information",
+                      icon: Icons.edit_note,
+                      title: "General Information",
                       content: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -204,13 +211,11 @@ class _SignUpStep3State extends State<SignUpStep3> {
                           const SizedBox(height: 4),
                           Text("Email: ${widget.userData['email']}", style: const TextStyle(fontSize: 15)),
                           const SizedBox(height: 4),
-                          Text("Department: ${widget.userData['department']}", style: const TextStyle(fontSize: 15)),
+                          Text("Program: ${widget.userData['department']}", style: const TextStyle(fontSize: 15)),
                           const SizedBox(height: 4),
                           Text("College: ${widget.userData['college']}", style: const TextStyle(fontSize: 15)),
                           const SizedBox(height: 4),
                           Text("Role: ${widget.userData['user_type']}", style: const TextStyle(fontSize: 15)),
-                          const SizedBox(height: 4),
-                          Text("Profile Picture: ${widget.userData['profile_picture'] ?? 'No file selected'}", style: const TextStyle(fontSize: 15)),
                         ],
                       ),
                     ),
@@ -219,7 +224,8 @@ class _SignUpStep3State extends State<SignUpStep3> {
 
                     // Security Info Card
                     _buildInfoCard(
-                      title: "🔒 Security Information",
+                      icon: Icons.shield_outlined,
+                      title: "Security Information",
                       content: const Text("Password: ********", style: TextStyle(fontSize: 15)),
                     ),
 
@@ -227,7 +233,8 @@ class _SignUpStep3State extends State<SignUpStep3> {
 
                     // Privacy Policy Consent
                     _buildInfoCard(
-                      title: "\uD83D\uDCDC Privacy Policy Consent",
+                      icon: Icons.privacy_tip_outlined,
+                      title: "Privacy Policy Consent",
                       content: CheckboxListTile(
                         controlAffinity: ListTileControlAffinity.leading,
                         contentPadding: EdgeInsets.zero,
@@ -346,7 +353,7 @@ class _SignUpStep3State extends State<SignUpStep3> {
   }
 
   // Card builder
-  Widget _buildInfoCard({required String title, required Widget content}) {
+  Widget _buildInfoCard({required IconData icon, required String title, required Widget content}) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -358,7 +365,16 @@ class _SignUpStep3State extends State<SignUpStep3> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Icon(icon, size: 20, color: Colors.grey[700]),
+                SizedBox(width: 6),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
             const Divider(),
             content,
           ],
@@ -386,7 +402,7 @@ class StepCircle extends StatelessWidget {
     return Column(
       children: [
         CircleAvatar(
-          backgroundColor: isActive ? Colors.blue : Colors.grey[300],
+          backgroundColor: isActive ? Colors.red : Colors.grey[300],
           child: Text(
             index.toString(),
             style: TextStyle(

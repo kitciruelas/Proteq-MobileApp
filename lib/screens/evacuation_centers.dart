@@ -4,8 +4,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import '../models/evacuation_center.dart';
 import '../services/evacuation_center_service.dart';
+import '../models/alert.dart';
+import '../services/alerts_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../screens/alerts_screen.dart'; // Added import for AlertsScreen
+import '../api/alerts_api.dart';
 
 class EvacuationCentersScreen extends StatefulWidget {
   const EvacuationCentersScreen({super.key});
@@ -27,11 +31,20 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
   EvacuationCenter? _nearestCenter;
   bool _isFindingNearest = false;
   LatLng? _userLocation;
+  
+  // Emergency alerts state
+  List<Alert> _emergencyAlerts = [];
+  bool _isLoadingAlerts = true;
+  bool _showAlertsPanel = false;
+  List<Alert> _alerts = [];
+
+  String _activePanel = 'alerts'; // 'alerts' or 'nearest'
 
   @override
   void initState() {
     super.initState();
     _fetchCenters();
+    _fetchAlerts();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -159,6 +172,83 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
     }
   }
 
+  Future<void> _fetchAlerts() async {
+    setState(() {
+      _isLoadingAlerts = true;
+    });
+    try {
+      final response = await AlertsApi.getLatestActiveAlert();
+      if (response['alert'] != null) {
+        final alert = Alert.fromJson(response['alert']);
+        print('Fetched alert: \\${alert.toJson()}'); // Debug print
+        if (alert.isActive) {
+          setState(() {
+            _alerts = [alert];
+          });
+          if (alert.latitude != null && alert.longitude != null) {
+            _mapController.move(
+              LatLng(alert.latitude!, alert.longitude!),
+              14.0, // preferred zoom
+            );
+          }
+        } else {
+          setState(() {
+            _alerts = [];
+          });
+        }
+      } else {
+        setState(() {
+          _alerts = [];
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _alerts = [];
+      });
+    } finally {
+      setState(() {
+        _isLoadingAlerts = false;
+      });
+    }
+  }
+
+  // Helper to get alert color based on type and priority
+  Color _getAlertCardColor(String alertType, String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  IconData _getAlertIcon(String alertType) {
+    switch (alertType.toLowerCase()) {
+      case 'emergency':
+        return Icons.warning_amber_rounded;
+      case 'drill':
+        return Icons.directions_run_rounded;
+      case 'earthquake':
+        return Icons.waves_rounded;
+      case 'typhoon':
+        return Icons.cloud;
+      case 'flood':
+        return Icons.water_damage_rounded;
+      case 'fire':
+        return Icons.local_fire_department_rounded;
+      case 'info':
+        return Icons.info_rounded;
+      case 'warning':
+        return Icons.warning_rounded;
+      default:
+        return Icons.notifications_active_rounded;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -192,6 +282,199 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
     return Scaffold(
       body: Stack(
         children: [
+          if (_alerts.isNotEmpty)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: GestureDetector(
+                  onTap: () {
+                    final alert = _alerts.first;
+                    if (alert.latitude != null && alert.longitude != null) {
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            title: Row(
+                              children: [
+                                Icon(_getAlertIcon(alert.alertType), color: _getAlertCardColor(alert.alertType, alert.priority)),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(alert.title)),
+                              ],
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (alert.message.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Text(alert.message),
+                                  ),
+                                Text('Type: ${alert.alertType}'),
+                                Text('Priority: ${alert.priority}'),
+                                if (alert.latitude != null && alert.longitude != null)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                    child: SizedBox(
+                                      width: 300,
+                                      height: 200,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: FlutterMap(
+                                          options: MapOptions(
+                                            initialCenter: LatLng(alert.latitude!, alert.longitude!),
+                                            initialZoom: 14.0,
+                                            interactionOptions: const InteractionOptions(
+                                              flags: InteractiveFlag.none,
+                                            ),
+                                          ),
+                                          children: [
+                                            TileLayer(
+                                              urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                                              subdomains: const ['a', 'b', 'c', 'd'],
+                                            ),
+                                            MarkerLayer(
+                                              markers: [
+                                                Marker(
+                                                  point: LatLng(alert.latitude!, alert.longitude!),
+                                                  width: 48,
+                                                  height: 48,
+                                                  child: Icon(
+                                                    Icons.warning_amber_rounded,
+                                                    color: Colors.red.shade700,
+                                                    size: 40,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (alert.radiusKm != null)
+                                              CircleLayer(
+                                                circles: [
+                                                  CircleMarker(
+                                                    point: LatLng(alert.latitude!, alert.longitude!),
+                                                    color: Colors.red.withOpacity(0.2),
+                                                    borderStrokeWidth: 2,
+                                                    borderColor: Colors.red,
+                                                    radius: (alert.radiusKm! * 1000),
+                                                  ),
+                                                ],
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (alert.latitude != null && alert.longitude != null)
+                                  Text('Location: ${alert.latitude}, ${alert.longitude}'),
+                                if (alert.radiusKm != null)
+                                  Text('Radius (km): ${alert.radiusKm}'),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Close'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _getAlertCardColor(_alerts.first.alertType, _alerts.first.priority).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _getAlertCardColor(_alerts.first.alertType, _alerts.first.priority).withOpacity(0.18),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _getAlertCardColor(_alerts.first.alertType, _alerts.first.priority).withOpacity(0.10),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(22.0),
+                          child: Icon(
+                            _getAlertIcon(_alerts.first.alertType),
+                            color: _getAlertCardColor(_alerts.first.alertType, _alerts.first.priority),
+                            size: 54,
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: _getAlertCardColor(_alerts.first.alertType, _alerts.first.priority).withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      _alerts.first.priority.toUpperCase(),
+                                      style: TextStyle(
+                                        color: _getAlertCardColor(_alerts.first.alertType, _alerts.first.priority),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _alerts.first.title,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 17,
+                                        color: _getAlertCardColor(_alerts.first.alertType, _alerts.first.priority),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_alerts.first.message.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  _alerts.first.message,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[800],
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 28),
+                          onPressed: () {
+                            setState(() {
+                              _alerts.removeAt(0);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
@@ -208,6 +491,37 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                 urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
                 subdomains: const ['a', 'b', 'c', 'd'],
               ),
+              // Active alert marker and circle
+              if (_alerts.isNotEmpty && _alerts.first.latitude != null && _alerts.first.longitude != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: LatLng(_alerts.first.latitude!, _alerts.first.longitude!),
+                      width: 60,
+                      height: 60,
+                      child: Tooltip(
+                        message: _alerts.first.title,
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red.shade700,
+                          size: 54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              if (_alerts.isNotEmpty && _alerts.first.latitude != null && _alerts.first.longitude != null && _alerts.first.radiusKm != null)
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: LatLng(_alerts.first.latitude!, _alerts.first.longitude!),
+                      color: Colors.red.withOpacity(0.2),
+                      borderStrokeWidth: 2,
+                      borderColor: Colors.red,
+                      radius: (_alerts.first.radiusKm! * 1000), // radius in meters
+                    ),
+                  ],
+                ),
               if (_userLocation != null)
                 MarkerLayer(
                   markers: [
@@ -262,7 +576,7 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                         child: Material(
                           color: Colors.transparent,
                           child: Container(
-                            constraints: const BoxConstraints(maxHeight: 90, maxWidth: 180),
+                            constraints: const BoxConstraints(maxHeight: 180, maxWidth: 220),
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -275,18 +589,17 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                                 ),
                               ],
                             ),
-                            child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(_selectedCenter!.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  Text('Status: \\${_selectedCenter!.status}'),
-                                  Text('Capacity: \\${_selectedCenter!.capacity}'),
-                                  Text('Occupancy: \\${_selectedCenter!.currentOccupancy}'),
-                                  Text('Contact: \\${_selectedCenter!.contactPerson}'),
-                                  Text('Phone: \\${_selectedCenter!.contactNumber}'),
-                                ],
+                            child: Scrollbar(
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_selectedCenter!.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -314,6 +627,9 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                if (_activePanel == 'nearest' && _nearestCenter != null) ...[
+                  // _buildNearestCenterCard(_nearestCenter!),
+                ],
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: TextField(
@@ -324,87 +640,6 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                     ),
                   ),
                 ),
-                if (_selectedCenter != null)
-                  Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    color: Colors.blue.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(_selectedCenter!.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.blue)),
-                              IconButton(
-                                icon: const Icon(Icons.close, color: Colors.blue),
-                                tooltip: 'Close details',
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedCenter = null;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.info, size: 18, color: Colors.black54),
-                              const SizedBox(width: 4),
-                              Text('Status: \\${_selectedCenter!.status}', style: const TextStyle(fontSize: 14, color: Colors.black87)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.people, size: 18, color: Colors.black54),
-                              const SizedBox(width: 4),
-                              RichText(
-                                text: TextSpan(
-                                  children: [
-                                    const TextSpan(
-                                      text: 'Capacity: ',
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
-                                    ),
-                                    TextSpan(
-                                      text: ' \\${_selectedCenter!.currentOccupancy}/\\${_selectedCenter!.capacity}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: _selectedCenter!.currentOccupancy >= _selectedCenter!.capacity
-                                            ? Colors.red
-                                            : Colors.green,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.person, size: 18, color: Colors.black54),
-                              const SizedBox(width: 4),
-                              Text('Contact: \\${_selectedCenter!.contactPerson}', style: const TextStyle(fontSize: 14, color: Colors.black87)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.phone, size: 18, color: Colors.black54),
-                              const SizedBox(width: 4),
-                              Text('Phone: \\${_selectedCenter!.contactNumber}', style: const TextStyle(fontSize: 14, color: Colors.black87)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 Expanded(
                   child: sortedCenters.isEmpty
                       ? Center(
@@ -439,9 +674,7 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                                         Expanded(
                                           child: Text(
                                             center.name,
-                                            style: isNearest
-                                              ? const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)
-                                              : const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                                           ),
                                         ),
                                         Container(
@@ -488,7 +721,7 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
                                               ),
                                               TextSpan(
-                                                text: ' ${center.currentOccupancy}/${center.capacity}',
+                                                text: ' ${center.currentOccupancy.toString().padLeft(2, '0')}/${center.capacity.toString().padLeft(2, '0')}',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 14,
@@ -499,6 +732,50 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                                               ),
                                             ],
                                           ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Occupancy Rate',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${((center.currentOccupancy / center.capacity) * 100).toStringAsFixed(1)}%',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: center.currentOccupancy >= center.capacity
+                                                    ? Colors.red
+                                                    : (center.currentOccupancy / center.capacity) > 0.8
+                                                        ? Colors.orange
+                                                        : Colors.green,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        LinearProgressIndicator(
+                                          value: center.capacity > 0 ? center.currentOccupancy / center.capacity : 0,
+                                          backgroundColor: Colors.grey[300],
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            center.currentOccupancy >= center.capacity
+                                                ? Colors.red
+                                                : (center.currentOccupancy / center.capacity) > 0.8
+                                                    ? Colors.orange
+                                                    : Colors.green,
+                                          ),
+                                          minHeight: 8,
                                         ),
                                       ],
                                     ),
@@ -515,40 +792,25 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
                                         Tooltip(
-                                          message: 'View details on map',
-                                          child: ElevatedButton.icon(
-                                            onPressed: () {
-                                              setState(() {
-                                                _selectedCenter = center;
-                                              });
-                                              _mapController.move(
-                                                LatLng(center.lat, center.lng),
-                                                _mapController.camera.zoom,
-                                              );
-                                            },
-                                            icon: const Icon(Icons.info_outline, size: 18),
-                                            label: const Text('View'),
-                                            style: ElevatedButton.styleFrom(
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                              backgroundColor: Colors.blue,
-                                              foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Tooltip(
                                           message: 'Get directions',
                                           child: OutlinedButton.icon(
                                             onPressed: () async {
-                                              final url = Uri.encodeFull(
-                                                'https://www.google.com/maps/dir/?api=1&destination=\\${center.lat},\\${center.lng}'
-                                              );
-                                              if (await canLaunchUrl(Uri.parse(url))) {
-                                                await launchUrl(Uri.parse(url));
-                                              } else {
+                                              final url = 'https://www.google.com/maps/dir/?api=1&destination=${center.lat},${center.lng}&travelmode=driving';
+                                              final uri = Uri.parse(url);
+                                              try {
+                                                if (await canLaunchUrl(uri)) {
+                                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                                } else {
+                                                  if (await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+                                                  } else {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('Could not launch navigation.')),
+                                                    );
+                                                  }
+                                                }
+                                              } catch (e) {
                                                 ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(content: Text('Could not open maps.'))
+                                                  SnackBar(content: Text('Error launching navigation: $e')),
                                                 );
                                               }
                                             },
@@ -581,7 +843,13 @@ class _EvacuationCentersScreenState extends State<EvacuationCentersScreen> {
               message: 'Find the nearest evacuation center',
               child: FloatingActionButton.extended(
                 heroTag: 'findNearest',
-                onPressed: _isFindingNearest ? null : _findNearestCenter,
+                onPressed: _isFindingNearest ? null : () async {
+                  await _findNearestCenter();
+                  setState(() {
+                    _activePanel = 'nearest';
+                  });
+                  _panelController.open();
+                },
                 label: _isFindingNearest
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('Find Nearest'),

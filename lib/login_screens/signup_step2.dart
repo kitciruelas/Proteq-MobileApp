@@ -98,7 +98,13 @@ class _SignUpStep2State extends State<SignUpStep2> {
                       ),
                       const SizedBox(height: 28),
 
-                      const Text("🔐 Password"),
+                      Row(
+                        children: [
+                          Icon(Icons.lock_outline, size: 20, color: Colors.grey[700]),
+                          SizedBox(width: 6),
+                          Text("Password"),
+                        ],
+                      ),
                       const SizedBox(height: 6),
                       TextFormField(
                         obscureText: _obscurePassword,
@@ -163,7 +169,13 @@ class _SignUpStep2State extends State<SignUpStep2> {
 
                       const SizedBox(height: 20),
 
-                      const Text("🔁 Confirm Password"),
+                      Row(
+                        children: [
+                          Icon(Icons.lock_reset, size: 20, color: Colors.grey[700]),
+                          SizedBox(width: 6),
+                          Text("Confirm Password"),
+                        ],
+                      ),
                       const SizedBox(height: 6),
                       TextFormField(
                         obscureText: _obscureConfirm,
@@ -317,7 +329,7 @@ class StepCircle extends StatelessWidget {
     return Column(
       children: [
         CircleAvatar(
-          backgroundColor: isActive ? Colors.blue : Colors.grey[300],
+          backgroundColor: isActive ? Colors.red : Colors.grey[300],
           child: Text(
             index.toString(),
             style: TextStyle(

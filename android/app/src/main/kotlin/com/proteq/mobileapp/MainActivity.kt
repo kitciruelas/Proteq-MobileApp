@@ -1,4 +1,4 @@
-package com.example.proteq_mobileapp
+package com.proteq.mobileapp
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
