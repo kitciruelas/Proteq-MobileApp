@@ -7,12 +7,14 @@ class StaffIncidentsService {
     String? status,
     String? priorityLevel,
     String? incidentType,
+    String? resolvedToday,
   }) async {
     try {
       final result = await StaffIncidentsApi.getAssignedIncidents(
         status: status,
         priorityLevel: priorityLevel,
         incidentType: incidentType,
+        resolvedToday: resolvedToday,
       );
       
       // Check for authentication errors

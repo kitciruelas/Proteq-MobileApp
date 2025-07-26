@@ -9,7 +9,7 @@ import '../models/welfare_check.dart';
 class WelfareCheckApi {
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://192.168.1.10/api';
+      : 'http://192.168.0.102/api';
 
   // Get auth token from SessionService
   static Future<String?> getToken() async {

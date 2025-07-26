@@ -4,13 +4,14 @@ import 'package:flutter/foundation.dart';
 class StaffIncidentsApi {
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://192.168.1.10/api';
+      : 'http://192.168.0.102/api';
     
   /// Get incidents assigned to the current staff member
   static Future<Map<String, dynamic>> getAssignedIncidents({
     String? status,
     String? priorityLevel, 
     String? incidentType,
+    String? resolvedToday,
   }) async {
     try {
       // Build query parameters
@@ -18,6 +19,7 @@ class StaffIncidentsApi {
       if (status != null) queryParams['status'] = status;
       if (priorityLevel != null) queryParams['priority_level'] = priorityLevel;
       if (incidentType != null) queryParams['incident_type'] = incidentType;
+      if (resolvedToday != null) queryParams['resolved_today'] = resolvedToday;
 
       final queryString = queryParams.isNotEmpty 
           ? '?${queryParams.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}'

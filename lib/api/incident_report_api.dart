@@ -12,7 +12,7 @@ class IncidentReportApi {
   // Base URL depending on platform (Web or Android Emulator)
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api' // For web (same machine)
-      : 'http://192.168.1.10/api'; // For Android emulator (maps to localhost)
+      : 'http://192.168.0.102/api'; // For Android emulator (maps to localhost)
 
   // Submit a new incident report - now uses the new ApiClient
   static Future<Map<String, dynamic>> submitIncidentReport(IncidentReport report) async {
@@ -151,5 +151,21 @@ class IncidentReportApi {
 
   static Future<void> storeToken(String token) async {
     await SessionService.storeToken(token);
+  }
+
+  // Fetch incidents resolved today using the backend endpoint
+  static Future<Map<String, dynamic>> getResolvedTodayIncidents() async {
+    try {
+      final response = await ApiClient.authenticatedCall(
+        endpoint: '/controller/StaffAssignedIncidents.php?resolved_today=1&status=resolved',
+        method: 'GET',
+      );
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to get resolved today incidents: $e',
+      };
+    }
   }
 }

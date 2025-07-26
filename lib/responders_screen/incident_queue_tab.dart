@@ -71,17 +71,7 @@ class _IncidentQueueTabState extends State<IncidentQueueTab> {
         }
       }
       
-      // If still no staff found, create mock data for testing
-      staff = Staff(
-        staffId: user?.userId ?? 1,
-        name: user?.fullName ?? 'Dr. Sarah Johnson',
-        email: user?.email ?? 'sarah.johnson@hospital.com',
-        role: 'nurse',
-        availability: 'available',
-        status: 'active',
-        createdAt: '2024-01-15 08:30:00',
-        updatedAt: '2024-01-15 14:45:00',
-      );
+      
       
       setState(() {
         _staff = staff;
@@ -240,34 +230,64 @@ class _IncidentQueueTabState extends State<IncidentQueueTab> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _IncidentFilterChip(
-                    label: 'All (${widget.incidents.length})', 
+                  ChoiceChip(
+                    label: Text('All ( ${widget.incidents.length})'),
                     selected: selectedFilter == 'all',
-                    onTap: () => setState(() => selectedFilter = 'all'),
+                    selectedColor: Colors.red,
+                    backgroundColor: Colors.grey[200],
+                    labelStyle: TextStyle(
+                      color: selectedFilter == 'all' ? Colors.white : Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => setState(() => selectedFilter = 'all'),
                   ),
                   const SizedBox(width: 8),
-                  _IncidentFilterChip(
-                    label: 'Pending (${widget.incidents.where((i) => i.status.toLowerCase() == 'pending').length})', 
+                  ChoiceChip(
+                    label: Text('Pending ( ${widget.incidents.where((i) => i.status.toLowerCase() == 'pending').length})'),
                     selected: selectedFilter == 'pending',
-                    onTap: () => setState(() => selectedFilter = 'pending'),
+                    selectedColor: Colors.red,
+                    backgroundColor: Colors.grey[200],
+                    labelStyle: TextStyle(
+                      color: selectedFilter == 'pending' ? Colors.white : Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => setState(() => selectedFilter = 'pending'),
                   ),
                   const SizedBox(width: 8),
-                  _IncidentFilterChip(
-                    label: 'Assigned (${widget.incidents.where((i) => i.status.toLowerCase() == 'assigned').length})', 
+                  ChoiceChip(
+                    label: Text('Assigned ( ${widget.incidents.where((i) => i.status.toLowerCase() == 'assigned').length})'),
                     selected: selectedFilter == 'assigned',
-                    onTap: () => setState(() => selectedFilter = 'assigned'),
+                    selectedColor: Colors.red,
+                    backgroundColor: Colors.grey[200],
+                    labelStyle: TextStyle(
+                      color: selectedFilter == 'assigned' ? Colors.white : Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => setState(() => selectedFilter = 'assigned'),
                   ),
                   const SizedBox(width: 8),
-                  _IncidentFilterChip(
-                    label: 'Active (${widget.incidents.where((i) => ['en route', 'on scene', 'in_progress'].contains(i.status.toLowerCase())).length})', 
+                  ChoiceChip(
+                    label: Text('Active ( ${widget.incidents.where((i) => ['en route', 'on scene', 'in_progress'].contains(i.status.toLowerCase())).length})'),
                     selected: selectedFilter == 'active',
-                    onTap: () => setState(() => selectedFilter = 'active'),
+                    selectedColor: Colors.red,
+                    backgroundColor: Colors.grey[200],
+                    labelStyle: TextStyle(
+                      color: selectedFilter == 'active' ? Colors.white : Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => setState(() => selectedFilter = 'active'),
                   ),
                   const SizedBox(width: 8),
-                  _IncidentFilterChip(
-                    label: 'Unvalidated (${widget.incidents.where((i) => i.validationStatus.toLowerCase() == 'unvalidated').length})', 
+                  ChoiceChip(
+                    label: Text('Unvalidated ( ${widget.incidents.where((i) => i.validationStatus.toLowerCase() == 'unvalidated').length})'),
                     selected: selectedFilter == 'unvalidated',
-                    onTap: () => setState(() => selectedFilter = 'unvalidated'),
+                    selectedColor: Colors.red,
+                    backgroundColor: Colors.grey[200],
+                    labelStyle: TextStyle(
+                      color: selectedFilter == 'unvalidated' ? Colors.white : Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) => setState(() => selectedFilter = 'unvalidated'),
                   ),
                 ],
               ),
@@ -372,7 +392,7 @@ class _IncidentCard extends StatelessWidget {
   String? get _getActionLabel {
     switch (incident.status.toLowerCase()) {
       case 'pending':
-        return 'Accept';
+        return null; // Remove Accept button
       case 'assigned':
         return 'Start Response';
       case 'en route':
@@ -387,9 +407,9 @@ class _IncidentCard extends StatelessWidget {
   Color? get _getActionColor {
     switch (incident.status.toLowerCase()) {
       case 'pending':
-        return Colors.green;
+        return null; // No color for removed Accept button
       case 'assigned':
-        return Colors.blue;
+        return Colors.red;
       case 'en route':
         return Colors.orange;
       case 'on scene':
@@ -401,9 +421,7 @@ class _IncidentCard extends StatelessWidget {
 
   VoidCallback? get _getActionCallback {
     final actionLabel = _getActionLabel;
-    if (actionLabel == 'Accept' && onAccept != null) {
-      return () => onAccept!(incident);
-    } else if (actionLabel == 'Start Response' && onStartResponse != null) {
+    if (actionLabel == 'Start Response' && onStartResponse != null) {
       return () => onStartResponse!(incident);
     }
     return null;
@@ -420,34 +438,36 @@ class _IncidentCard extends StatelessWidget {
         );
       },
       child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        elevation: 0,
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        elevation: 3,
+        color: Colors.white,
+        shadowColor: Colors.red.withOpacity(0.08),
         child: Padding(
-          padding: const EdgeInsets.all(14.0),
+          padding: const EdgeInsets.all(18.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: incident.priorityColor.withOpacity(0.15),
-                    child: Icon(_getIncidentIcon, color: incident.priorityColor, size: 22),
+                    backgroundColor: Colors.red.withOpacity(0.12),
+                    child: Icon(_getIncidentIcon, color: Colors.red, size: 24),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          incident.incidentType, 
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                          incident.incidentType,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                         ),
                         const SizedBox(height: 2),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: incident.validationStatusColor.withOpacity(0.1),
+                            color: incident.validationStatusColor.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -455,7 +475,7 @@ class _IncidentCard extends StatelessWidget {
                             style: TextStyle(
                               color: incident.validationStatusColor,
                               fontWeight: FontWeight.w600,
-                              fontSize: 10,
+                              fontSize: 11,
                             ),
                           ),
                         ),
@@ -463,55 +483,55 @@ class _IncidentCard extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: incident.statusColor.withOpacity(0.12),
+                      color: Colors.red.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      incident.status, 
-                      style: TextStyle(
-                        color: incident.statusColor, 
-                        fontWeight: FontWeight.w600, 
-                        fontSize: 12
-                      )
+                      incident.status,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               Text(
-                incident.description, 
-                style: const TextStyle(color: Colors.black87, fontSize: 14)
+                incident.description,
+                style: const TextStyle(color: Colors.black87, fontSize: 15),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
-                incident.location, 
-                style: const TextStyle(color: Colors.black54, fontSize: 13)
+                incident.location,
+                style: const TextStyle(color: Colors.black54, fontSize: 13),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   if (incident.distance != null)
                     Row(
                       children: [
-                        Icon(Icons.location_on, color: Colors.grey, size: 16),
+                        Icon(Icons.location_on, color: Colors.red, size: 16),
                         const SizedBox(width: 2),
                         Text(
-                          incident.formattedDistance, 
-                          style: const TextStyle(color: Colors.black54, fontSize: 12)
+                          incident.formattedDistance,
+                          style: const TextStyle(color: Colors.black54, fontSize: 12),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 14),
                       ],
                     ),
                   if (incident.estimatedArrivalTime != null)
                     Row(
                       children: [
-                        Icon(Icons.timer, color: Colors.grey, size: 16),
+                        Icon(Icons.timer, color: Colors.red, size: 16),
                         const SizedBox(width: 2),
                         Text(
-                          'ETA: ${incident.estimatedArrivalTime}', 
-                          style: const TextStyle(color: Colors.black54, fontSize: 12)
+                          'ETA:  ${incident.estimatedArrivalTime}',
+                          style: const TextStyle(color: Colors.black54, fontSize: 12),
                         ),
                       ],
                     ),
@@ -520,23 +540,23 @@ class _IncidentCard extends StatelessWidget {
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _getActionColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       ),
                       onPressed: _getActionCallback,
                       child: Text(
-                        _getActionLabel!, 
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+                        _getActionLabel!,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ),
                   IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    icon: const Icon(Icons.edit, color: Colors.red),
                     onPressed: onEdit,
                     tooltip: 'Edit Incident',
                   ),
                 ],
               ),
-
             ],
           ),
         ),

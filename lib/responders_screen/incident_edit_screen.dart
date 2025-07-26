@@ -96,7 +96,7 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Incident ${_selectedValidationStatus == 'validated' ? 'validated' : 'rejected'} successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.red,
           ),
         );
         
@@ -152,7 +152,7 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Incident updated successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.red,
           ),
         );
         widget.onIncidentUpdated?.call();
@@ -207,19 +207,22 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
           children: [
             // Incident Header
             Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              shadowColor: Colors.red.withOpacity(0.08),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: _incident.priorityColor.withOpacity(0.15),
+                          backgroundColor: Colors.red.withOpacity(0.12),
                           child: Icon(
                             _getIncidentIcon(_incident.incidentType),
-                            color: _incident.priorityColor,
-                            size: 24,
+                            color: Colors.red,
+                            size: 26,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -230,7 +233,7 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                               Text(
                                 _incident.incidentType,
                                 style: const TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 19,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -245,17 +248,17 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: _incident.validationStatusColor.withOpacity(0.1),
+                            color: Colors.red.withOpacity(0.10),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             _incident.validationStatus.toUpperCase(),
-                            style: TextStyle(
-                              color: _incident.validationStatusColor,
+                            style: const TextStyle(
+                              color: Colors.red,
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 13,
                             ),
                           ),
                         ),
@@ -264,17 +267,17 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                     const SizedBox(height: 12),
                     Text(
                       _incident.description,
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16, color: Colors.black87),
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.location_on, color: Colors.grey, size: 16),
+                        const Icon(Icons.location_on, color: Colors.red, size: 16),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             _incident.location,
-                            style: const TextStyle(color: Colors.grey),
+                            style: const TextStyle(color: Colors.black54),
                           ),
                         ),
                       ],
@@ -296,8 +299,10 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
               ),
               const SizedBox(height: 12),
               Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(18.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -309,8 +314,8 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                       DropdownButtonFormField<String>(
                         value: _selectedValidationStatus,
                         decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         ),
                         items: AssignedIncident.validationStatusValues.map((status) {
                           return DropdownMenuItem(
@@ -334,9 +339,9 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                         TextField(
                           controller: _rejectionReasonController,
                           decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                             hintText: 'Enter reason for rejection...',
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           ),
                           maxLines: 3,
                         ),
@@ -347,9 +352,10 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                         child: ElevatedButton(
                           onPressed: (_isSaving || _incident.incidentId == null) ? null : _validateIncident,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                           child: const Text('Validate Incident'),
                         ),
@@ -372,8 +378,10 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
               ),
               const SizedBox(height: 12),
               Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(18.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -386,8 +394,8 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                       DropdownButtonFormField<String>(
                         value: _selectedStatus,
                         decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         ),
                         items: AssignedIncident.statusValues.map((status) {
                           return DropdownMenuItem(
@@ -412,8 +420,8 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                       DropdownButtonFormField<String>(
                         value: _selectedPriorityLevel,
                         decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         ),
                         items: AssignedIncident.priorityLevels.map((priority) {
                           return DropdownMenuItem(
@@ -438,8 +446,8 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                       DropdownButtonFormField<String>(
                         value: _selectedReporterSafeStatus,
                         decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         ),
                         items: AssignedIncident.reporterSafeStatusValues.map((status) {
                           return DropdownMenuItem(
@@ -461,9 +469,10 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
                         child: ElevatedButton(
                           onPressed: (_isSaving || _incident.incidentId == null) ? null : _updateIncident,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                           child: _isSaving
                               ? Row(
@@ -492,17 +501,19 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
             if (_incident.validationStatus == 'rejected') ...[
               const SizedBox(height: 24),
               Card(
-                color: Colors.redAccent.withOpacity(0.1),
+                color: Colors.red.withOpacity(0.08),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 child: Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(18.0),
                   child: Row(
                     children: [
-                      Icon(Icons.block, color: Colors.red),
-                      SizedBox(width: 12),
+                      Icon(Icons.block, color: Colors.red, size: 28),
+                      SizedBox(width: 14),
                       Expanded(
                         child: Text(
                           'This incident was rejected and cannot be edited.',
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                       ),
                     ],
@@ -522,8 +533,10 @@ class _IncidentEditScreenState extends State<IncidentEditScreen> {
               ),
               const SizedBox(height: 12),
               Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(18.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

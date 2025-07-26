@@ -52,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       type: 'Medical',
     ),
     _SafetyTip(
-      title: 'Intruder Alert',
+      title: 'Security Alert',
       description: 'Lock doors, stay quiet, and hide. Call security if safe to do so.',
       type: 'Intrusion',
     ),

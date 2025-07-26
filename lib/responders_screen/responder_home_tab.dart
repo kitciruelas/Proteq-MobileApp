@@ -20,6 +20,7 @@ import '../models/evacuation_center.dart';
 import '../services/evacuation_center_service.dart';
 import 'notifications_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../api/incident_report_api.dart';
 
 class ResponderHomeTab extends StatefulWidget {
   const ResponderHomeTab({super.key});
@@ -140,18 +141,8 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
           return;
         }
       }
-      
-      // If still no staff found, create mock data for testing
-      staff = Staff(
-        staffId: user?.userId ?? 1,
-        name: user?.fullName ?? 'Dr. Sarah Johnson',
-        email: user?.email ?? 'sarah.johnson@hospital.com',
-        role: 'nurse',
-        availability: 'available',
-        status: 'active',
-        createdAt: '2024-01-15 08:30:00',
-        updatedAt: '2024-01-15 14:45:00',
-      );
+        
+        // If still no staff found, do nothing (no mock data).
       
       setState(() {
         _staff = staff;
@@ -347,33 +338,27 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
         _isLoadingIncidents = true;
       });
 
+      // Fetch all assigned incidents (default)
       final result = await StaffIncidentsService.getAssignedIncidents();
-      
+      List<AssignedIncident> incidents = [];
       if (result['success'] == true && result['data'] != null) {
-        final List<AssignedIncident> incidents = result['data'];
-        final sortedIncidents = StaffIncidentsService.sortIncidentsByPriorityAndDistance(incidents);
-        final stats = StaffIncidentsService.getResponseStatistics(incidents);
-        
-        setState(() {
-          _assignedIncidents = sortedIncidents;
-          _responseStats = stats;
-          _isLoadingIncidents = false;
-        });
-      } else {
-        setState(() {
-          _isLoadingIncidents = false;
-        });
-        
-        if (result['requiresAuth'] == true) {
-          // Handle authentication error
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Authentication required'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        incidents = result['data'];
       }
+      final sortedIncidents = StaffIncidentsService.sortIncidentsByPriorityAndDistance(incidents);
+      // Compute stats as usual, but override resolvedToday
+      final stats = StaffIncidentsService.getResponseStatistics(sortedIncidents);
+      // Fetch resolved today incidents for the stat using the new API method
+      final resolvedTodayResult = await IncidentReportApi.getResolvedTodayIncidents();
+      int resolvedTodayCount = 0;
+      if (resolvedTodayResult['success'] == true && resolvedTodayResult['data'] != null) {
+        resolvedTodayCount = (resolvedTodayResult['data'] as List).length;
+      }
+      stats['resolvedToday'] = resolvedTodayCount;
+      setState(() {
+        _assignedIncidents = sortedIncidents;
+        _responseStats = stats;
+        _isLoadingIncidents = false;
+      });
     } catch (e) {
       setState(() {
         _isLoadingIncidents = false;

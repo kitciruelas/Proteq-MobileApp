@@ -4,7 +4,7 @@ import 'api_client.dart';
 class EvacuationCenterApi {
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://192.168.1.10/api';
+      : 'http://192.168.0.102/api';
 
   // Fetch all evacuation centers
   static Future<Map<String, dynamic>> fetchAllCenters() async {

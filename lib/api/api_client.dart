@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://192.168.1.10/api';
+  static const String baseUrl = 'http://192.168.0.102/api';
   
   static String? _authToken;
 
