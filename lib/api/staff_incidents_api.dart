@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 class StaffIncidentsApi {
   static final String _baseUrl = kIsWeb
       ? 'http://localhost/api'
-      : 'http://192.168.0.102/api';
+      : 'http://192.168.100.134/api';
     
   /// Get incidents assigned to the current staff member
   static Future<Map<String, dynamic>> getAssignedIncidents({

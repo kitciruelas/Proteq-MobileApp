@@ -8,6 +8,8 @@ import '../models/staff.dart';
 import '../models/assigned_incident.dart';
 import '../services/staff_service.dart';
 import '../services/staff_incidents_service.dart';
+import '../services/staff_location_service.dart';
+import '../api/staff_location_api.dart';
 import 'incident_queue_tab.dart';
 import 'incidents_map_tab.dart';
 import 'staff_profile.dart';
@@ -41,6 +43,8 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
   EvacuationCenter? _nearestEvacuationCenter;
   bool _isLoadingNearestCenter = false;
   bool _isMapFullScreen = false;
+  List<Map<String, dynamic>> _nearbyStaff = [];
+  bool _isLoadingNearbyStaff = false;
 
   // Map controller for zoom controls
   final MapController _mapController = MapController();
@@ -55,6 +59,7 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
     _loadUser();
     _loadAssignedIncidents();
     _initializeLocation();
+    _loadNearbyStaff();
   }
 
   /// Initialize location services
@@ -367,12 +372,44 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
     }
   }
 
+  Future<void> _loadNearbyStaff() async {
+    try {
+      setState(() {
+        _isLoadingNearbyStaff = true;
+      });
+
+      if (_staff != null && _currentLocation != null) {
+        // Get nearby staff within 10km radius
+        final nearbyStaff = await StaffLocationService.getLocationsWithinRadius(
+          centerLatitude: _currentLocation.latitude,
+          centerLongitude: _currentLocation.longitude,
+          radiusInKm: 10.0,
+        );
+
+        setState(() {
+          _nearbyStaff = nearbyStaff;
+          _isLoadingNearbyStaff = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingNearbyStaff = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingNearbyStaff = false;
+      });
+      print('Error loading nearby staff: $e');
+    }
+  }
+
   // Current staff location from GPS
   LatLng _currentLocation = const LatLng(13.9411, 121.1631); // Default BSU Lipa coordinates
   bool _isLocationUpdating = false;
   bool _hasLocationPermission = false;
   bool _gpsPluginAvailable = true; // Now using real GPS
   Position? _lastKnownPosition;
+  DateTime? _lastLocationUpdate;
 
   /// Check and request location permissions
   Future<void> _checkLocationPermission() async {
@@ -692,29 +729,67 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
       // Get real GPS location
       await _getCurrentLocation();
       
-      final result = await StaffIncidentsService.updateLocation(
-        latitude: _currentLocation.latitude,
-        longitude: _currentLocation.longitude,
-      );
-      
-      if (result['success'] == true) {
-        // Reload incidents to get updated distances
-        await _loadAssignedIncidents();
+      // Update location using the new staff location service
+      if (_staff != null) {
+        final result = await StaffLocationService.updateLocation(
+          staffId: _staff!.staffId,
+          latitude: _currentLocation.latitude,
+          longitude: _currentLocation.longitude,
+        );
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location updated successfully'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 1),
-          ),
-        );
+        if (result['success'] == true) {
+          // Also update location for incidents service (for backward compatibility)
+          await StaffIncidentsService.updateLocation(
+            latitude: _currentLocation.latitude,
+            longitude: _currentLocation.longitude,
+          );
+          
+          // Reload incidents to get updated distances
+          await _loadAssignedIncidents();
+          
+          // Reload nearby staff
+          await _loadNearbyStaff();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location updated successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to update location'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Failed to update location'),
-            backgroundColor: Colors.orange,
-          ),
+        // Fallback to old method if no staff data
+        final result = await StaffIncidentsService.updateLocation(
+          latitude: _currentLocation.latitude,
+          longitude: _currentLocation.longitude,
         );
+        
+        if (result['success'] == true) {
+          await _loadAssignedIncidents();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location updated successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to update location'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
       print('Error updating location: $e');
@@ -833,15 +908,37 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
       );
       
       _locationSubscription = Geolocator.getPositionStream(locationSettings: locationSettings)
-          .listen((Position position) {
+          .listen((Position position) async {
         print('Location stream update: ${position.latitude}, ${position.longitude}');
         
         setState(() {
           _currentLocation = LatLng(position.latitude, position.longitude);
           _lastKnownPosition = position;
         });
+        
         // Move map to new location
         _mapController.move(LatLng(position.latitude, position.longitude), _mapController.camera.zoom);
+        
+        // Update staff location on server periodically (every 30 seconds)
+        final now = DateTime.now();
+        if (_lastLocationUpdate == null || 
+            now.difference(_lastLocationUpdate!).inSeconds >= 30) {
+          _lastLocationUpdate = now;
+          
+          // Update location on server
+          if (_staff != null) {
+            try {
+              await StaffLocationService.updateLocation(
+                staffId: _staff!.staffId,
+                latitude: position.latitude,
+                longitude: position.longitude,
+              );
+              print('Staff location updated on server');
+            } catch (e) {
+              print('Error updating staff location on server: $e');
+            }
+          }
+        }
       }, onError: (error) {
         print('Location stream error: $error');
       });
@@ -980,6 +1077,15 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
     return degrees * (pi / 180);
   }
 
+  String _formatDateTime(String dateTimeString) {
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateTimeString;
+    }
+  }
+
   /// Get incident icon based on type
   IconData _getIncidentIcon(String incidentType) {
     switch (incidentType.toLowerCase()) {
@@ -1022,6 +1128,191 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
       default:
         return 45.0;
     }
+  }
+
+  /// Get staff availability color
+  Color _getStaffAvailabilityColor(String availability) {
+    switch (availability.toLowerCase()) {
+      case 'available':
+        return Colors.green;
+      case 'busy':
+        return Colors.orange;
+      case 'off-duty':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// Get staff role icon
+  IconData _getStaffRoleIcon(String role) {
+    switch (role.toLowerCase()) {
+      case 'nurse':
+        return Icons.medical_services;
+      case 'paramedic':
+        return Icons.local_hospital;
+      case 'security':
+        return Icons.security;
+      case 'firefighter':
+        return Icons.local_fire_department;
+      default:
+        return Icons.person;
+    }
+  }
+
+  /// Show staff details in a bottom sheet
+  void _showStaffDetails(Map<String, dynamic> staff) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        final staffName = staff['staff_name'] ?? staff['name'] ?? 'Unknown';
+        final staffRole = staff['staff_role'] ?? staff['role'] ?? 'Staff';
+        final availability = staff['availability'] ?? 'unknown';
+        final distance = staff['distance']?.toDouble();
+        final lastUpdated = staff['last_updated'] ?? staff['timestamp'];
+        
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.4,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with staff info
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _getStaffAvailabilityColor(availability).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              _getStaffRoleIcon(staffRole),
+                              color: _getStaffAvailabilityColor(availability),
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  staffName,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  staffRole,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _getStaffAvailabilityColor(availability),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    availability.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Details
+                      if (distance != null) ...[
+                        _DetailCard(
+                          icon: Icons.straighten,
+                          title: 'Distance',
+                          value: StaffLocationService.formatDistance(distance),
+                          iconColor: Colors.blue,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (lastUpdated != null) ...[
+                        _DetailCard(
+                          icon: Icons.schedule,
+                          title: 'Last Updated',
+                          value: _formatDateTime(lastUpdated),
+                          iconColor: Colors.green,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      
+                      // Action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.message),
+                              label: const Text('Contact'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                // TODO: Implement contact functionality
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Contact feature coming soon'),
+                                    backgroundColor: Colors.blue,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// Show incident details in a bottom sheet
@@ -1814,6 +2105,46 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
                                                   );
                                                 }).toList(),
                                               ),
+                                              // Staff location markers
+                                              MarkerLayer(
+                                                markers: _nearbyStaff
+                                                    .where((staff) => staff['latitude'] != null && staff['longitude'] != null)
+                                                    .map((staff) {
+                                                  final staffLat = staff['latitude']?.toDouble() ?? 0.0;
+                                                  final staffLng = staff['longitude']?.toDouble() ?? 0.0;
+                                                  final staffName = staff['staff_name'] ?? staff['name'] ?? 'Unknown';
+                                                  final staffRole = staff['staff_role'] ?? staff['role'] ?? 'Staff';
+                                                  final availability = staff['availability'] ?? 'unknown';
+                                                  
+                                                  return Marker(
+                                                    width: 35.0,
+                                                    height: 35.0,
+                                                    point: LatLng(staffLat, staffLng),
+                                                    child: GestureDetector(
+                                                      onTap: () => _showStaffDetails(staff),
+                                                      child: Container(
+                                                        decoration: BoxDecoration(
+                                                          color: _getStaffAvailabilityColor(availability).withOpacity(0.9),
+                                                          shape: BoxShape.circle,
+                                                          border: Border.all(color: Colors.white, width: 2),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors.black.withOpacity(0.2),
+                                                              blurRadius: 6,
+                                                              offset: const Offset(0, 2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Icon(
+                                                          _getStaffRoleIcon(staffRole),
+                                                          color: Colors.white,
+                                                          size: 18,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                              ),
                                             ],
                                           ),
                                                                              // Live tracking indicator
@@ -1940,6 +2271,7 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
                                              ),
                                            ),
                                          ),
+
                                        // GPS coordinates indicator (for debugging)
                                        if (_hasLocationPermission)
                                          Positioned(
@@ -2087,6 +2419,7 @@ class _ResponderHomeTabState extends State<ResponderHomeTab> {
                                                  tooltip: 'Refresh Incidents',
                                                ),
                                              ),
+
                                            ],
                                          ),
                                        ),

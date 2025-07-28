@@ -179,4 +179,78 @@ class StaffService {
       return null;
     }
   }
+
+  // Update staff location
+  static Future<Map<String, dynamic>> updateStaffLocation({
+    required int staffId,
+    required double latitude,
+    required double longitude,
+    String? address,
+  }) async {
+    try {
+      // Validate coordinates
+      if (latitude < -90 || latitude > 90) {
+        return {
+          'success': false,
+          'message': 'Invalid latitude value. Must be between -90 and 90.',
+        };
+      }
+      
+      if (longitude < -180 || longitude > 180) {
+        return {
+          'success': false,
+          'message': 'Invalid longitude value. Must be between -180 and 180.',
+        };
+      }
+
+      final response = await ApiClient.updateStaffLocation(
+        staffId: staffId,
+        latitude: latitude,
+        longitude: longitude,
+        address: address,
+        timestamp: DateTime.now().toIso8601String(),
+      );
+
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to update staff location: $e',
+      };
+    }
+  }
+
+  // Get staff location
+  static Future<Map<String, dynamic>?> getStaffLocation(int staffId) async {
+    try {
+      final response = await ApiClient.getStaffLocation(staffId);
+      
+      if (response['success'] == true && response['data'] != null) {
+        return response['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting staff location: $e');
+      return null;
+    }
+  }
+
+  // Get all staff locations
+  static Future<List<Map<String, dynamic>>> getAllStaffLocations() async {
+    try {
+      final response = await ApiClient.authenticatedCall(
+        endpoint: '/controller/StaffLocation.php?get_all=1',
+        method: 'GET',
+      );
+
+      if (response['success'] == true && response['data'] != null) {
+        final List<dynamic> locationsData = response['data'];
+        return locationsData.map((json) => json as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error getting all staff locations: $e');
+      return [];
+    }
+  }
 } 

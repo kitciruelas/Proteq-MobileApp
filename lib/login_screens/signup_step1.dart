@@ -25,7 +25,7 @@ class _SignUpStep1State extends State<SignUpStep1> {
   final List<String> colleges = [
     "College of Accountancy, Business, Economics and International Hospitality Management (CABEIHM)",
     "College of Arts and Sciences (CAS)",
-    "College of Computer Studies (CCS)",
+    "College of Informatics and Computing Sciences (CICS)",
     "College of Engineering (COE)",
     "College of Industrial Technology (CIT)",
     "College of Teacher Education (CTE)",
@@ -43,7 +43,7 @@ class _SignUpStep1State extends State<SignUpStep1> {
       "BS in Psychology",
       "BS in Biology",
     ],
-    "College of Computer Studies (CCS)": [
+    "College of Informatics and Computing Sciences (CICS)": [
       "BS in Computer Science",
       "BS in Information Technology",
     ],

@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://192.168.0.102/api';
+  static const String baseUrl = 'http://192.168.100.134/api';
   
   static String? _authToken;
 
@@ -354,5 +354,52 @@ class ApiClient {
       return response['response'] as Map<String, dynamic>;
     }
     return null;
+  }
+
+  // Update staff location
+  static Future<Map<String, dynamic>> updateStaffLocation({
+    required int staffId,
+    required double latitude,
+    required double longitude,
+    String? address,
+    String? timestamp,
+  }) async {
+    try {
+      final response = await authenticatedCall(
+        endpoint: '/controller/StaffLocation.php',
+        method: 'POST',
+        body: {
+          'staff_id': staffId,
+          'latitude': latitude,
+          'longitude': longitude,
+          if (address != null) 'address': address,
+          if (timestamp != null) 'timestamp': timestamp,
+        },
+      );
+
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to update staff location: ${e.toString()}',
+      };
+    }
+  }
+
+  // Get staff location
+  static Future<Map<String, dynamic>> getStaffLocation(int staffId) async {
+    try {
+      final response = await authenticatedCall(
+        endpoint: '/controller/StaffLocation.php?staff_id=$staffId',
+        method: 'GET',
+      );
+
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to get staff location: ${e.toString()}',
+      };
+    }
   }
 } 
